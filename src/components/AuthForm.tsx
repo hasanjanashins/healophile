@@ -1,11 +1,14 @@
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Eye, EyeOff, Lock, Mail, User } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail, User, UserMd } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface AuthFormProps {
   type: "login" | "signup";
@@ -13,11 +16,15 @@ interface AuthFormProps {
 
 const AuthForm = ({ type }: AuthFormProps) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { login, signup } = useAuth();
+  
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
+    role: "patient" as "patient" | "doctor"
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -27,16 +34,45 @@ const AuthForm = ({ type }: AuthFormProps) => {
     });
   };
 
+  const handleRoleChange = (value: string) => {
+    setFormData({
+      ...formData,
+      role: value as "patient" | "doctor"
+    });
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Demo submission - would connect to backend auth in production
-    toast({
-      title: type === "login" ? "Logging in..." : "Creating your account...",
-      description: "This is a demo. In a real app, you would be authenticated now.",
-    });
-    
-    console.log("Form submitted:", formData);
+    try {
+      if (type === "login") {
+        login(formData.email, formData.password, formData.role);
+        toast({
+          title: "Login successful",
+          description: `Welcome back${formData.role === "doctor" ? ", Doctor" : ""}!`,
+        });
+        
+        // Redirect to appropriate dashboard
+        if (formData.role === "doctor") {
+          navigate("/doctor-dashboard");
+        } else {
+          navigate("/");
+        }
+      } else {
+        signup(formData.name, formData.email, formData.password, formData.role);
+        toast({
+          title: "Account created",
+          description: "Your account has been created successfully!",
+        });
+        navigate("/");
+      }
+    } catch (error) {
+      toast({
+        title: "Authentication error",
+        description: "There was a problem authenticating you.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -126,6 +162,24 @@ const AuthForm = ({ type }: AuthFormProps) => {
                 )}
               </Button>
             </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label>I am a</Label>
+            <RadioGroup 
+              value={formData.role} 
+              onValueChange={handleRoleChange}
+              className="flex space-x-4"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="patient" id="patient" />
+                <Label htmlFor="patient" className="cursor-pointer">Patient</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="doctor" id="doctor" />
+                <Label htmlFor="doctor" className="cursor-pointer">Doctor</Label>
+              </div>
+            </RadioGroup>
           </div>
           
           <Button

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { CalendarIcon, CheckCircle, Clock, User, UserMd } from "lucide-react";
+import { CalendarIcon, CheckCircle, Clock, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -162,7 +162,7 @@ const Appointments = () => {
                 </p>
                 <div className="bg-muted p-4 rounded-lg w-full max-w-sm">
                   <div className="flex items-start space-x-3 mb-2">
-                    <UserMd className="h-5 w-5 text-healophile-blue mt-0.5" />
+                    <User className="h-5 w-5 text-healophile-blue mt-0.5" />
                     <div>
                       <p className="font-medium">{selectedDoctor?.name}</p>
                       <p className="text-sm text-muted-foreground">

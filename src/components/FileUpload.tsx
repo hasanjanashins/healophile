@@ -11,32 +11,46 @@ import { useAuth } from "@/contexts/AuthContext";
 
 // Available doctors list
 const availableDoctors = [
-  { id: "d1", name: "Dr. Arjun Singh", specialty: "Cardiology" },
+  { id: "doc123", name: "Dr. Arjun Singh", specialty: "Cardiology" },
   { id: "d2", name: "Dr. Kavita Deshmukh", specialty: "Neurology" },
   { id: "d3", name: "Dr. Rajesh Gupta", specialty: "Orthopedics" }
 ];
 
+// Function to get files from localStorage or initialize with default data
+const getStoredFiles = () => {
+  const storedFiles = localStorage.getItem('healophileFiles');
+  if (storedFiles) {
+    return JSON.parse(storedFiles);
+  }
+  return [];
+};
+
+// Function to save files to localStorage
+const saveFilesToStorage = (files) => {
+  localStorage.setItem('healophileFiles', JSON.stringify(files));
+};
+
 const FileUpload = () => {
   const { toast } = useToast();
   const { currentUser } = useAuth();
-  const [files, setFiles] = useState<File[]>([]);
+  const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [selectedDoctors, setSelectedDoctors] = useState<Record<string, boolean>>({});
+  const [selectedDoctors, setSelectedDoctors] = useState({});
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (event) => {
     if (event.target.files && event.target.files.length > 0) {
       const newFiles = Array.from(event.target.files);
       setFiles([...files, ...newFiles]);
     }
   };
 
-  const handleRemoveFile = (index: number) => {
+  const handleRemoveFile = (index) => {
     setFiles(files.filter((_, i) => i !== index));
   };
 
-  const handleDoctorSelection = (doctorId: string, checked: boolean) => {
+  const handleDoctorSelection = (doctorId, checked) => {
     setSelectedDoctors({
       ...selectedDoctors,
       [doctorId]: checked
@@ -60,6 +74,45 @@ const FileUpload = () => {
           clearInterval(interval);
           setUploading(false);
           setIsSuccess(true);
+          
+          // Get selected doctors
+          const selectedDoctorsList = availableDoctors.filter(doctor => selectedDoctors[doctor.id]);
+          
+          // Create new files to add to storage
+          const storedFiles = getStoredFiles();
+          const newStoredFiles = [...storedFiles];
+          
+          files.forEach((file, index) => {
+            // Create file type (document or image) based on file extension
+            const fileExtension = file.name.split('.').pop().toLowerCase();
+            const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(fileExtension);
+            const fileType = isImage ? 'image' : 'document';
+            
+            // Create thumbnail based on file type
+            const thumbnail = isImage 
+              ? "https://placehold.co/400x400/d3e4fd/0EA5E9?text=Image" 
+              : "https://placehold.co/400x500/e5deff/7E69AB?text=Doc";
+            
+            // Add the new file to storage
+            const newFile = {
+              id: `${Date.now()}-${index}`,
+              name: file.name,
+              type: fileType,
+              date: new Date().toISOString().split('T')[0],
+              size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+              patientId: currentUser?.id,
+              patientName: currentUser?.name,
+              thumbnail: thumbnail,
+              sharedWith: selectedDoctorsList.map(doc => doc.name),
+              sharedWithIds: selectedDoctorsList.map(doc => doc.id),
+              isShared: selectedDoctorsList.length > 0
+            };
+            
+            newStoredFiles.push(newFile);
+          });
+          
+          // Save updated files to storage
+          saveFilesToStorage(newStoredFiles);
           
           // Format sharing message
           const selectedDoctorCount = getSelectedDoctorsCount();

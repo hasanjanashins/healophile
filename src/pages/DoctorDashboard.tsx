@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -6,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, User, Calendar, FileText, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, User, Calendar, FileText, AlertCircle, ChevronDown, ChevronUp, BedDouble } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
+import HospitalBedAvailability from "@/components/HospitalBedAvailability";
 
 // Mock patient data for the doctor dashboard with Indian names
 const patients = [
@@ -131,9 +131,9 @@ const upcomingAppointments = [
 const DoctorDashboard = () => {
   const { currentUser } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
-  const [expandedPatient, setExpandedPatient] = useState<string | null>(null);
+  const [expandedPatient, setExpandedPatient] = useState(null);
   
-  const togglePatientDetails = (patientId: string) => {
+  const togglePatientDetails = (patientId) => {
     setExpandedPatient(expandedPatient === patientId ? null : patientId);
   };
   
@@ -192,11 +192,11 @@ const DoctorDashboard = () => {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Pending Reports</p>
-                  <p className="text-3xl font-bold">7</p>
+                  <p className="text-sm font-medium text-muted-foreground">Available Hospital Beds</p>
+                  <p className="text-3xl font-bold">75</p>
                 </div>
                 <div className="h-12 w-12 bg-healophile-emergency/20 rounded-full flex items-center justify-center">
-                  <AlertCircle className="h-6 w-6 text-healophile-emergency" />
+                  <BedDouble className="h-6 w-6 text-healophile-emergency" />
                 </div>
               </div>
             </CardContent>
@@ -204,9 +204,10 @@ const DoctorDashboard = () => {
         </div>
         
         <Tabs defaultValue="patients" className="space-y-6">
-          <TabsList className="w-full grid grid-cols-2">
+          <TabsList className="w-full grid grid-cols-3">
             <TabsTrigger value="patients">All Patients</TabsTrigger>
-            <TabsTrigger value="appointments">Upcoming Appointments</TabsTrigger>
+            <TabsTrigger value="appointments">Appointments</TabsTrigger>
+            <TabsTrigger value="hospital-beds">Hospital Beds</TabsTrigger>
           </TabsList>
           
           <TabsContent value="patients" className="space-y-6">
@@ -367,6 +368,10 @@ const DoctorDashboard = () => {
                 </Card>
               ))}
             </div>
+          </TabsContent>
+          
+          <TabsContent value="hospital-beds">
+            <HospitalBedAvailability />
           </TabsContent>
         </Tabs>
       </div>

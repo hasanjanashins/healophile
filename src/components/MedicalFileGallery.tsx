@@ -11,9 +11,9 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-// Sample data - would come from backend in real app
-// Added association with test accounts from AuthContext
-const sampleFiles = [
+// Sample data - with shared state across all users in this demo app
+// This will simulate a database for our demo purposes
+const globalFileStorage = [
   {
     id: "1",
     name: "Blood Test Results.pdf",
@@ -21,6 +21,7 @@ const sampleFiles = [
     date: "2025-03-15",
     size: "1.2 MB",
     patientId: "pat456", // Priya Sharma (test patient)
+    patientName: "Priya Sharma",
     thumbnail: "https://placehold.co/400x500/e5deff/7E69AB?text=PDF",
     sharedWith: ["Dr. Arjun Singh"],
     sharedWithIds: ["doc123"], // Dr. Arjun Singh (test doctor)
@@ -33,6 +34,7 @@ const sampleFiles = [
     date: "2025-02-28",
     size: "3.5 MB",
     patientId: "pat456", // Priya Sharma
+    patientName: "Priya Sharma",
     thumbnail: "https://placehold.co/400x400/d3e4fd/0EA5E9?text=X-Ray",
     sharedWith: ["Dr. Arjun Singh"],
     sharedWithIds: ["doc123"], // Dr. Arjun Singh
@@ -45,6 +47,7 @@ const sampleFiles = [
     date: "2025-03-10",
     size: "0.8 MB",
     patientId: "pat456", // Priya Sharma
+    patientName: "Priya Sharma",
     thumbnail: "https://placehold.co/400x500/e5deff/7E69AB?text=PDF",
     sharedWith: [],
     sharedWithIds: [],
@@ -57,6 +60,7 @@ const sampleFiles = [
     date: "2025-01-20",
     size: "5.2 MB",
     patientId: "pat456", // Priya Sharma
+    patientName: "Priya Sharma",
     thumbnail: "https://placehold.co/400x400/d3e4fd/0EA5E9?text=MRI",
     sharedWith: ["Dr. Arjun Singh"],
     sharedWithIds: ["doc123"], // Dr. Arjun Singh
@@ -69,12 +73,29 @@ const sampleFiles = [
     date: "2024-12-05",
     size: "2.1 MB",
     patientId: "pat456", // Priya Sharma
+    patientName: "Priya Sharma",
     thumbnail: "https://placehold.co/400x500/e5deff/7E69AB?text=PDF",
     sharedWith: [],
     sharedWithIds: [],
     isShared: false
   },
 ];
+
+// Function to get files from localStorage or initialize with default data
+const getStoredFiles = () => {
+  const storedFiles = localStorage.getItem('healophileFiles');
+  if (storedFiles) {
+    return JSON.parse(storedFiles);
+  }
+  // Initialize with default sample data
+  localStorage.setItem('healophileFiles', JSON.stringify(globalFileStorage));
+  return globalFileStorage;
+};
+
+// Function to save files to localStorage
+const saveFilesToStorage = (files) => {
+  localStorage.setItem('healophileFiles', JSON.stringify(files));
+};
 
 // Available doctors list
 const availableDoctors = [
@@ -88,13 +109,14 @@ const MedicalFileGallery = () => {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
-  const [selectedFile, setSelectedFile] = useState<string | null>(null);
-  const [shareDoctor, setShareDoctor] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [shareDoctor, setShareDoctor] = useState(null);
+  const [files, setFiles] = useState(getStoredFiles());
   
   const isDoctor = currentUser?.role === "doctor";
   
   // Filter files based on user role and ID
-  const userFiles = sampleFiles.filter(file => {
+  const userFiles = files.filter(file => {
     // If doctor, only show files shared with them
     if (isDoctor && currentUser?.id) {
       return file.sharedWithIds.includes(currentUser.id);
@@ -112,19 +134,44 @@ const MedicalFileGallery = () => {
     return matchesSearch && matchesTab;
   });
 
-  const handleShareFile = (fileId: string) => {
+  const handleShareFile = (fileId) => {
     if (!shareDoctor) return;
     
-    // In a real app, this would make an API call to share the file
+    // Find the doctor to share with
+    const doctorToShare = availableDoctors.find(d => d.id === shareDoctor);
+    if (!doctorToShare) return;
+    
+    // Update the file share status in our files array
+    const updatedFiles = files.map(file => {
+      if (file.id === fileId) {
+        // Check if already shared with this doctor
+        if (file.sharedWithIds.includes(shareDoctor)) {
+          return file; // Already shared
+        }
+        
+        return {
+          ...file,
+          sharedWith: [...file.sharedWith, doctorToShare.name],
+          sharedWithIds: [...file.sharedWithIds, doctorToShare.id],
+          isShared: true
+        };
+      }
+      return file;
+    });
+    
+    // Update state and storage
+    setFiles(updatedFiles);
+    saveFilesToStorage(updatedFiles);
+    
     toast({
       title: "File shared successfully",
-      description: `File has been shared with ${availableDoctors.find(d => d.id === shareDoctor)?.name}`,
+      description: `File has been shared with ${doctorToShare.name}`,
     });
     
     setShareDoctor(null);
     setSelectedFile(null);
   };
-  
+
   return (
     <Card className="w-full border-healophile-blue-light">
       <CardHeader>
@@ -268,22 +315,8 @@ const MedicalFileGallery = () => {
   );
 };
 
-interface FileCardProps {
-  file: {
-    id: string;
-    name: string;
-    type: string;
-    date: string;
-    size: string;
-    thumbnail: string;
-    sharedWith: string[];
-    isShared: boolean;
-  };
-  isDoctor: boolean;
-  onShare: () => void;
-}
-
-const FileCard = ({ file, isDoctor, onShare }: FileCardProps) => {
+// FileCard component remains mostly the same, but with updated types
+const FileCard = ({ file, isDoctor, onShare }) => {
   const { toast } = useToast();
   
   const handleDownload = () => {
@@ -294,7 +327,7 @@ const FileCard = ({ file, isDoctor, onShare }: FileCardProps) => {
   };
 
   return (
-    <div className="border rounded-lg overflow-hidden card-hover">
+    <div className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all">
       <div className="relative h-36 bg-gray-100">
         <img
           src={file.thumbnail}
@@ -322,6 +355,13 @@ const FileCard = ({ file, isDoctor, onShare }: FileCardProps) => {
             </div>
           )}
         </div>
+        {isDoctor && (
+          <div className="absolute bottom-2 left-2">
+            <Badge variant="outline" className="bg-white text-xs">
+              From: {file.patientName}
+            </Badge>
+          </div>
+        )}
       </div>
       <div className="p-3">
         <h3 className="font-medium truncate" title={file.name}>

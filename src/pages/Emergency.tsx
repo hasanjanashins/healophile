@@ -2,6 +2,8 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import EmergencyServices from "@/components/EmergencyServices";
+import HospitalBedAvailability from "@/components/HospitalBedAvailability";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Emergency = () => {
   return (
@@ -14,8 +16,19 @@ const Emergency = () => {
           use the options below to get immediate assistance.
         </p>
         
-        <div className="max-w-4xl mx-auto">
-          <EmergencyServices />
+        <div className="max-w-5xl mx-auto">
+          <Tabs defaultValue="contacts" className="w-full">
+            <TabsList className="w-full grid grid-cols-2 mb-6">
+              <TabsTrigger value="contacts">Emergency Contacts</TabsTrigger>
+              <TabsTrigger value="beds">Hospital Bed Availability</TabsTrigger>
+            </TabsList>
+            <TabsContent value="contacts">
+              <EmergencyServices />
+            </TabsContent>
+            <TabsContent value="beds">
+              <HospitalBedAvailability />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
       <Footer />

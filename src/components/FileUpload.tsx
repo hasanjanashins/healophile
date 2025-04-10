@@ -4,14 +4,26 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Upload, File, FilePlus, FileX, CheckCircle } from "lucide-react";
+import { Upload, File, FilePlus, FileX, CheckCircle, Share } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from "@/contexts/AuthContext";
+
+// Available doctors list
+const availableDoctors = [
+  { id: "d1", name: "Dr. Arjun Singh", specialty: "Cardiology" },
+  { id: "d2", name: "Dr. Kavita Deshmukh", specialty: "Neurology" },
+  { id: "d3", name: "Dr. Rajesh Gupta", specialty: "Orthopedics" }
+];
 
 const FileUpload = () => {
   const { toast } = useToast();
+  const { currentUser } = useAuth();
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [selectedDoctors, setSelectedDoctors] = useState<Record<string, boolean>>({});
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files.length > 0) {
@@ -22,6 +34,17 @@ const FileUpload = () => {
 
   const handleRemoveFile = (index: number) => {
     setFiles(files.filter((_, i) => i !== index));
+  };
+
+  const handleDoctorSelection = (doctorId: string, checked: boolean) => {
+    setSelectedDoctors({
+      ...selectedDoctors,
+      [doctorId]: checked
+    });
+  };
+
+  const getSelectedDoctorsCount = () => {
+    return Object.values(selectedDoctors).filter(selected => selected).length;
   };
 
   const handleUpload = () => {
@@ -37,12 +60,26 @@ const FileUpload = () => {
           clearInterval(interval);
           setUploading(false);
           setIsSuccess(true);
-          setFiles([]);
+          
+          // Format sharing message
+          const selectedDoctorCount = getSelectedDoctorsCount();
+          let sharingMessage = '';
+          
+          if (selectedDoctorCount > 0) {
+            const doctorNames = availableDoctors
+              .filter(doctor => selectedDoctors[doctor.id])
+              .map(doctor => doctor.name);
+            
+            sharingMessage = ` and shared with ${doctorNames.join(', ')}`;
+          }
           
           toast({
             title: "Files uploaded successfully",
-            description: `${files.length} file(s) have been securely uploaded to your medical records.`,
+            description: `${files.length} file(s) have been securely uploaded to your medical records${sharingMessage}.`,
           });
+          
+          setFiles([]);
+          setSelectedDoctors({});
           
           setTimeout(() => {
             setIsSuccess(false);
@@ -130,6 +167,37 @@ const FileUpload = () => {
                 </div>
               ))}
             </div>
+            
+            <div className="space-y-2 pt-2">
+              <div className="flex items-center justify-between">
+                <h3 className="font-medium flex items-center">
+                  <Share className="h-4 w-4 mr-2" />
+                  Share with doctors
+                </h3>
+                <span className="text-sm text-muted-foreground">
+                  {getSelectedDoctorsCount()} selected
+                </span>
+              </div>
+              <div className="border rounded-md p-3 space-y-3">
+                {availableDoctors.map((doctor) => (
+                  <div key={doctor.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`doctor-${doctor.id}`}
+                      checked={selectedDoctors[doctor.id] || false}
+                      onCheckedChange={(checked) => 
+                        handleDoctorSelection(doctor.id, checked === true)
+                      }
+                    />
+                    <Label htmlFor={`doctor-${doctor.id}`} className="cursor-pointer flex-1">
+                      <span className="font-medium">{doctor.name}</span>
+                      <span className="text-sm text-muted-foreground block">
+                        {doctor.specialty}
+                      </span>
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
         
@@ -149,7 +217,9 @@ const FileUpload = () => {
           className="w-full bg-healophile-purple hover:bg-healophile-purple-dark"
           disabled={files.length === 0 || uploading}
         >
-          {uploading ? "Uploading..." : `Upload ${files.length > 0 ? `(${files.length})` : ""}`}
+          {uploading ? "Uploading..." : `Upload ${files.length > 0 ? `(${files.length})` : ""} ${
+            getSelectedDoctorsCount() > 0 ? "& Share" : ""
+          }`}
         </Button>
       </CardFooter>
     </Card>

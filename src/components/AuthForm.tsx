@@ -49,7 +49,7 @@ const AuthForm = ({ type }: AuthFormProps) => {
         login(formData.email, formData.password, formData.role);
         toast({
           title: "Login successful",
-          description: `Welcome back${formData.role === "doctor" ? ", Doctor" : ""}!`,
+          description: `Welcome back${formData.role === "doctor" ? ", Dr." : ""}!`,
         });
         
         // Redirect to appropriate dashboard
@@ -97,7 +97,7 @@ const AuthForm = ({ type }: AuthFormProps) => {
                 <Input
                   id="name"
                   name="name"
-                  placeholder="John Doe"
+                  placeholder="Amit Kumar"
                   className="pl-10"
                   value={formData.name}
                   onChange={handleChange}
@@ -115,7 +115,7 @@ const AuthForm = ({ type }: AuthFormProps) => {
                 id="email"
                 name="email"
                 type="email"
-                placeholder="hello@example.com"
+                placeholder="amit.kumar@example.com"
                 className="pl-10"
                 value={formData.email}
                 onChange={handleChange}

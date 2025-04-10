@@ -10,14 +10,14 @@ import { Search, User, Calendar, FileText, AlertCircle, ChevronDown, ChevronUp }
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 
-// Mock patient data for the doctor dashboard
+// Mock patient data for the doctor dashboard with Indian names
 const patients = [
   {
     id: "p1",
-    name: "Emily Johnson",
+    name: "Priya Sharma",
     age: 34,
-    email: "emily.johnson@example.com",
-    phone: "(555) 123-4567",
+    email: "priya.sharma@example.com",
+    phone: "(+91) 98765-43210",
     conditions: ["Type 2 Diabetes", "Hypertension"],
     lastVisit: "2025-03-15",
     nextAppointment: "2025-04-20",
@@ -28,10 +28,10 @@ const patients = [
   },
   {
     id: "p2",
-    name: "Thomas Wilson",
+    name: "Rahul Verma",
     age: 45,
-    email: "thomas.wilson@example.com",
-    phone: "(555) 234-5678",
+    email: "rahul.verma@example.com",
+    phone: "(+91) 87654-32109",
     conditions: ["Asthma", "Arthritis"],
     lastVisit: "2025-02-28",
     nextAppointment: "2025-04-15",
@@ -42,10 +42,10 @@ const patients = [
   },
   {
     id: "p3",
-    name: "Sofia Martinez",
+    name: "Ananya Patel",
     age: 29,
-    email: "sofia.martinez@example.com",
-    phone: "(555) 345-6789",
+    email: "ananya.patel@example.com",
+    phone: "(+91) 76543-21098",
     conditions: ["Anxiety", "Migraine"],
     lastVisit: "2025-03-05",
     nextAppointment: "2025-04-25",
@@ -56,10 +56,10 @@ const patients = [
   },
   {
     id: "p4",
-    name: "Michael Chen",
+    name: "Vikram Malhotra",
     age: 52,
-    email: "michael.chen@example.com",
-    phone: "(555) 456-7890",
+    email: "vikram.malhotra@example.com",
+    phone: "(+91) 65432-10987",
     conditions: ["Coronary Artery Disease", "High Cholesterol"],
     lastVisit: "2025-03-10",
     nextAppointment: "2025-04-10",
@@ -70,10 +70,10 @@ const patients = [
   },
   {
     id: "p5",
-    name: "Amelia Taylor",
+    name: "Meera Iyer",
     age: 38,
-    email: "amelia.taylor@example.com",
-    phone: "(555) 567-8901",
+    email: "meera.iyer@example.com",
+    phone: "(+91) 54321-09876",
     conditions: ["Hypothyroidism", "Vitamin D Deficiency"],
     lastVisit: "2025-03-18",
     nextAppointment: "2025-04-18",
@@ -84,11 +84,11 @@ const patients = [
   }
 ];
 
-// Mock upcoming appointments
+// Mock upcoming appointments with Indian names
 const upcomingAppointments = [
   {
     id: "app1",
-    patientName: "Emily Johnson",
+    patientName: "Priya Sharma",
     patientId: "p1",
     date: "2025-04-20",
     time: "10:30 AM",
@@ -96,7 +96,7 @@ const upcomingAppointments = [
   },
   {
     id: "app2",
-    patientName: "Thomas Wilson",
+    patientName: "Rahul Verma",
     patientId: "p2",
     date: "2025-04-15",
     time: "9:00 AM",
@@ -104,7 +104,7 @@ const upcomingAppointments = [
   },
   {
     id: "app3",
-    patientName: "Amelia Taylor",
+    patientName: "Meera Iyer",
     patientId: "p5",
     date: "2025-04-18",
     time: "2:15 PM",
@@ -112,7 +112,7 @@ const upcomingAppointments = [
   },
   {
     id: "app4",
-    patientName: "Michael Chen",
+    patientName: "Vikram Malhotra",
     patientId: "p4",
     date: "2025-04-10",
     time: "11:45 AM",
@@ -120,7 +120,7 @@ const upcomingAppointments = [
   },
   {
     id: "app5",
-    patientName: "Sofia Martinez",
+    patientName: "Ananya Patel",
     patientId: "p3",
     date: "2025-04-25",
     time: "3:30 PM",

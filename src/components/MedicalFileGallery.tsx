@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Sample data - would come from backend in real app
+// Added association with test accounts from AuthContext
 const sampleFiles = [
   {
     id: "1",
@@ -18,8 +20,10 @@ const sampleFiles = [
     type: "document",
     date: "2025-03-15",
     size: "1.2 MB",
+    patientId: "pat456", // Priya Sharma (test patient)
     thumbnail: "https://placehold.co/400x500/e5deff/7E69AB?text=PDF",
-    sharedWith: ["Dr. Arjun Singh", "Dr. Kavita Deshmukh"],
+    sharedWith: ["Dr. Arjun Singh"],
+    sharedWithIds: ["doc123"], // Dr. Arjun Singh (test doctor)
     isShared: true
   },
   {
@@ -28,8 +32,10 @@ const sampleFiles = [
     type: "image",
     date: "2025-02-28",
     size: "3.5 MB",
+    patientId: "pat456", // Priya Sharma
     thumbnail: "https://placehold.co/400x400/d3e4fd/0EA5E9?text=X-Ray",
     sharedWith: ["Dr. Arjun Singh"],
+    sharedWithIds: ["doc123"], // Dr. Arjun Singh
     isShared: true
   },
   {
@@ -38,8 +44,10 @@ const sampleFiles = [
     type: "document",
     date: "2025-03-10",
     size: "0.8 MB",
+    patientId: "pat456", // Priya Sharma
     thumbnail: "https://placehold.co/400x500/e5deff/7E69AB?text=PDF",
     sharedWith: [],
+    sharedWithIds: [],
     isShared: false
   },
   {
@@ -48,8 +56,10 @@ const sampleFiles = [
     type: "image",
     date: "2025-01-20",
     size: "5.2 MB",
+    patientId: "pat456", // Priya Sharma
     thumbnail: "https://placehold.co/400x400/d3e4fd/0EA5E9?text=MRI",
-    sharedWith: ["Dr. Kavita Deshmukh"],
+    sharedWith: ["Dr. Arjun Singh"],
+    sharedWithIds: ["doc123"], // Dr. Arjun Singh
     isShared: true
   },
   {
@@ -58,15 +68,17 @@ const sampleFiles = [
     type: "document",
     date: "2024-12-05",
     size: "2.1 MB",
+    patientId: "pat456", // Priya Sharma
     thumbnail: "https://placehold.co/400x500/e5deff/7E69AB?text=PDF",
     sharedWith: [],
+    sharedWithIds: [],
     isShared: false
   },
 ];
 
 // Available doctors list
 const availableDoctors = [
-  { id: "d1", name: "Dr. Arjun Singh", specialty: "Cardiology" },
+  { id: "doc123", name: "Dr. Arjun Singh", specialty: "Cardiology" },
   { id: "d2", name: "Dr. Kavita Deshmukh", specialty: "Neurology" },
   { id: "d3", name: "Dr. Rajesh Gupta", specialty: "Orthopedics" }
 ];
@@ -81,7 +93,17 @@ const MedicalFileGallery = () => {
   
   const isDoctor = currentUser?.role === "doctor";
   
-  const filteredFiles = sampleFiles.filter((file) => {
+  // Filter files based on user role and ID
+  const userFiles = sampleFiles.filter(file => {
+    // If doctor, only show files shared with them
+    if (isDoctor && currentUser?.id) {
+      return file.sharedWithIds.includes(currentUser.id);
+    }
+    // If patient, show all their files
+    return file.patientId === currentUser?.id;
+  });
+  
+  const filteredFiles = userFiles.filter((file) => {
     const matchesSearch = file.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesTab = activeTab === "all" || 
                       (activeTab === "shared" && file.isShared) ||
@@ -197,7 +219,9 @@ const MedicalFileGallery = () => {
             <p className="text-muted-foreground">
               {searchQuery
                 ? `No results for "${searchQuery}"`
-                : "Upload some files to get started"}
+                : isDoctor 
+                  ? "No files have been shared with you yet"
+                  : "Upload some files to get started"}
             </p>
           </div>
         )}

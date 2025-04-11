@@ -36,7 +36,7 @@ const ALLOWED_FILE_TYPES = [
 ];
 
 // File type descriptions for user feedback
-const FILE_TYPE_DESCRIPTIONS = {
+const FILE_TYPE_DESCRIPTIONS: Record<string, string> = {
   'application/pdf': 'PDF Document',
   'application/msword': 'Word Document (DOC)',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'Word Document (DOCX)',
@@ -59,44 +59,47 @@ const getStoredFiles = () => {
 };
 
 // Function to save files to localStorage
-const saveFilesToStorage = (files) => {
+const saveFilesToStorage = (files: any[]) => {
   localStorage.setItem('healophileFiles', JSON.stringify(files));
 };
 
 // Function to generate a blockchain hash
-const generateBlockchainHash = (file, userId) => {
+const generateBlockchainHash = (file: File, userId: string) => {
   // In a real implementation, this would call a blockchain service
   // For now, we'll simulate a hash based on the file details and timestamp
   const fileData = `${file.name}-${file.size}-${userId}-${Date.now()}`;
   return Array.from(
     new Uint8Array(
-      new TextEncoder().encode(fileData).reduce(
-        (acc, byte) => acc + ((acc << 7) + (acc << 3)) ^ byte, 0
-      ).toString(16)
+      new TextEncoder().encode(fileData)
     )
   ).map(b => b.toString(16).padStart(2, '0')).join('');
 };
 
 // Function to validate if a file is a medical document
-const isMedicalDocument = (file) => {
+const isMedicalDocument = (file: File) => {
   return ALLOWED_FILE_TYPES.includes(file.type);
 };
+
+interface FileError {
+  name: string;
+  error: string;
+}
 
 const FileUpload = () => {
   const { toast } = useToast();
   const { currentUser } = useAuth();
-  const [files, setFiles] = useState([]);
+  const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [selectedDoctors, setSelectedDoctors] = useState({});
-  const [fileErrors, setFileErrors] = useState([]);
+  const [selectedDoctors, setSelectedDoctors] = useState<Record<string, boolean>>({});
+  const [fileErrors, setFileErrors] = useState<FileError[]>([]);
 
-  const handleFileChange = (event) => {
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files.length > 0) {
       const newFiles = Array.from(event.target.files);
-      const validFiles = [];
-      const errors = [];
+      const validFiles: File[] = [];
+      const errors: FileError[] = [];
 
       // Validate each file
       newFiles.forEach((file) => {
@@ -125,11 +128,11 @@ const FileUpload = () => {
     }
   };
 
-  const handleRemoveFile = (index) => {
+  const handleRemoveFile = (index: number) => {
     setFiles(files.filter((_, i) => i !== index));
   };
 
-  const handleDoctorSelection = (doctorId, checked) => {
+  const handleDoctorSelection = (doctorId: string, checked: boolean) => {
     setSelectedDoctors({
       ...selectedDoctors,
       [doctorId]: checked
@@ -163,7 +166,7 @@ const FileUpload = () => {
           
           files.forEach((file, index) => {
             // Create file type (document or image) based on file extension
-            const fileExtension = file.name.split('.').pop().toLowerCase();
+            const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
             const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'tiff', 'dicom'].includes(fileExtension);
             const fileType = isImage ? 'image' : 'document';
             
@@ -173,7 +176,7 @@ const FileUpload = () => {
               : "https://placehold.co/400x500/e5deff/7E69AB?text=Doc";
             
             // Generate blockchain hash for this file
-            const blockchainHash = generateBlockchainHash(file, currentUser?.id);
+            const blockchainHash = generateBlockchainHash(file, currentUser?.id || 'guest');
             
             // Add the new file to storage
             const newFile = {
@@ -182,8 +185,8 @@ const FileUpload = () => {
               type: fileType,
               date: new Date().toISOString().split('T')[0],
               size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
-              patientId: currentUser?.id,
-              patientName: currentUser?.name,
+              patientId: currentUser?.id || 'guest',
+              patientName: currentUser?.name || 'Guest User',
               thumbnail: thumbnail,
               sharedWith: selectedDoctorsList.map(doc => doc.name),
               sharedWithIds: selectedDoctorsList.map(doc => doc.id),
@@ -314,7 +317,7 @@ const FileUpload = () => {
                           {(file.size / 1024 / 1024).toFixed(2)} MB • 
                           {FILE_TYPE_DESCRIPTIONS[file.type] || file.type}
                         </p>
-                        <ShieldCheck className="h-3 w-3 ml-1 text-green-600" title="Will be secured with blockchain" />
+                        <ShieldCheck className="h-3 w-3 ml-1 text-green-600" />
                       </div>
                     </div>
                   </div>

@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, EyeOff, Lock, Mail, User } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AuthFormProps {
   type: "login" | "signup";
@@ -26,12 +28,25 @@ const AuthForm = ({ type }: AuthFormProps) => {
     password: "",
     role: "patient" as "patient" | "doctor"
   });
+  const [errors, setErrors] = useState<{
+    email?: string;
+    password?: string;
+    general?: string;
+  }>({});
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
+    
+    // Clear errors when user types
+    if (e.target.name === 'email' || e.target.name === 'password') {
+      setErrors({
+        ...errors,
+        [e.target.name]: undefined
+      });
+    }
   };
 
   const handleRoleChange = (value: string) => {
@@ -41,8 +56,22 @@ const AuthForm = ({ type }: AuthFormProps) => {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Clear previous errors
+    setErrors({});
+    
+    // Validate email
+    if (!validateEmail(formData.email)) {
+      setErrors({ ...errors, email: "Please enter a valid email address" });
+      return;
+    }
     
     try {
       if (type === "login") {
@@ -72,6 +101,7 @@ const AuthForm = ({ type }: AuthFormProps) => {
         description: "There was a problem authenticating you.",
         variant: "destructive"
       });
+      setErrors({ ...errors, general: "Authentication failed. Please check your credentials." });
     }
   };
 
@@ -88,6 +118,11 @@ const AuthForm = ({ type }: AuthFormProps) => {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {errors.general && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{errors.general}</AlertDescription>
+          </Alert>
+        )}
         <form onSubmit={handleSubmit} className="space-y-4">
           {type === "signup" && (
             <div className="space-y-2">
@@ -116,12 +151,15 @@ const AuthForm = ({ type }: AuthFormProps) => {
                 name="email"
                 type="email"
                 placeholder="amit.kumar@example.com"
-                className="pl-10"
+                className={`pl-10 ${errors.email ? 'border-red-500' : ''}`}
                 value={formData.email}
                 onChange={handleChange}
                 required
               />
             </div>
+            {errors.email && (
+              <p className="text-sm text-red-500">{errors.email}</p>
+            )}
           </div>
           
           <div className="space-y-2">
@@ -143,7 +181,7 @@ const AuthForm = ({ type }: AuthFormProps) => {
                 name="password"
                 type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
-                className="pl-10"
+                className={`pl-10 ${errors.password ? 'border-red-500' : ''}`}
                 value={formData.password}
                 onChange={handleChange}
                 required
@@ -162,6 +200,9 @@ const AuthForm = ({ type }: AuthFormProps) => {
                 )}
               </Button>
             </div>
+            {errors.password && (
+              <p className="text-sm text-red-500">{errors.password}</p>
+            )}
           </div>
           
           <div className="space-y-2">

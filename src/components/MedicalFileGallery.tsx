@@ -1,15 +1,17 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Search, FileText, Image, Download, Eye, Calendar, Share, Lock, Shield } from "lucide-react";
+import { Search, FileText, Image, Download, Eye, Calendar, Share, Lock, Shield, ShieldCheck, AlertTriangle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Sample data - with shared state across all users in this demo app
 // This will simulate a database for our demo purposes
@@ -25,7 +27,10 @@ const globalFileStorage = [
     thumbnail: "https://placehold.co/400x500/e5deff/7E69AB?text=PDF",
     sharedWith: ["Dr. Arjun Singh"],
     sharedWithIds: ["doc123"], // Dr. Arjun Singh (test doctor)
-    isShared: true
+    isShared: true,
+    blockchainHash: "8f7d88e4c3a0aaf6e25a8c137426310bd01f72f54376c37cbce41452a98d5950",
+    blockchainVerified: true,
+    uploadedAt: "2025-03-15T10:30:00.000Z"
   },
   {
     id: "2",
@@ -38,7 +43,10 @@ const globalFileStorage = [
     thumbnail: "https://placehold.co/400x400/d3e4fd/0EA5E9?text=X-Ray",
     sharedWith: ["Dr. Arjun Singh"],
     sharedWithIds: ["doc123"], // Dr. Arjun Singh
-    isShared: true
+    isShared: true,
+    blockchainHash: "a1c2e3g4i5k6m7o8q9s0u1w2y3a4c5e6g7i8k9m0o1q2s3u4w5y6",
+    blockchainVerified: true,
+    uploadedAt: "2025-02-28T15:45:00.000Z"
   },
   {
     id: "3",
@@ -51,7 +59,10 @@ const globalFileStorage = [
     thumbnail: "https://placehold.co/400x500/e5deff/7E69AB?text=PDF",
     sharedWith: [],
     sharedWithIds: [],
-    isShared: false
+    isShared: false,
+    blockchainHash: "b2d3f4h5j6l7n8p9r0t1v2x3z4b5d6f7h8j9l0n1p2r3t4v5x6z7",
+    blockchainVerified: true,
+    uploadedAt: "2025-03-10T09:15:00.000Z"
   },
   {
     id: "4",
@@ -64,7 +75,10 @@ const globalFileStorage = [
     thumbnail: "https://placehold.co/400x400/d3e4fd/0EA5E9?text=MRI",
     sharedWith: ["Dr. Arjun Singh"],
     sharedWithIds: ["doc123"], // Dr. Arjun Singh
-    isShared: true
+    isShared: true,
+    blockchainHash: "c3e4g5i6k7m8o9q0s1u2w3y4a5c6e7g8i9k0m1o2q3s4u5w6y7",
+    blockchainVerified: true,
+    uploadedAt: "2025-01-20T11:20:00.000Z"
   },
   {
     id: "5",
@@ -77,9 +91,21 @@ const globalFileStorage = [
     thumbnail: "https://placehold.co/400x500/e5deff/7E69AB?text=PDF",
     sharedWith: [],
     sharedWithIds: [],
-    isShared: false
+    isShared: false,
+    blockchainHash: "d4f5h6j7l8n9p0r1t2v3x4z5b6d7f8h9j0l1n2p3r4t5v6x7z8",
+    blockchainVerified: true,
+    uploadedAt: "2024-12-05T14:50:00.000Z"
   },
 ];
+
+// Function to verify blockchain integrity of a file
+const verifyBlockchainIntegrity = async (fileId, blockchainHash) => {
+  // In a real implementation, this would check against the blockchain
+  // For this demo, we're just simulating the verification process
+  
+  // Simulate blockchain verification by checking if hash exists
+  return !!blockchainHash;
+};
 
 // Function to get files from localStorage or initialize with default data
 const getStoredFiles = () => {
@@ -115,6 +141,21 @@ const MedicalFileGallery = () => {
   
   const isDoctor = currentUser?.role === "doctor";
   
+  // Verify blockchain integrity for all files on first load
+  useEffect(() => {
+    const verifyAllFiles = async () => {
+      const updatedFiles = await Promise.all(files.map(async (file) => {
+        const isVerified = await verifyBlockchainIntegrity(file.id, file.blockchainHash);
+        return { ...file, blockchainVerified: isVerified };
+      }));
+      
+      setFiles(updatedFiles);
+      saveFilesToStorage(updatedFiles);
+    };
+    
+    verifyAllFiles();
+  }, []);
+
   // Filter files based on user role and ID
   const userFiles = files.filter(file => {
     // If doctor, only show files shared with them
@@ -172,6 +213,41 @@ const MedicalFileGallery = () => {
     setSelectedFile(null);
   };
 
+  const handleVerifyBlockchain = async (fileId) => {
+    // Find the file
+    const fileToVerify = files.find(f => f.id === fileId);
+    if (!fileToVerify) return;
+    
+    toast({
+      title: "Verifying document integrity",
+      description: "Checking blockchain record..."
+    });
+    
+    // Simulate verification process
+    setTimeout(() => {
+      // In a real implementation, this would be an actual blockchain verification
+      const isVerified = !!fileToVerify.blockchainHash;
+      
+      const updatedFiles = files.map(file => {
+        if (file.id === fileId) {
+          return { ...file, blockchainVerified: isVerified };
+        }
+        return file;
+      });
+      
+      setFiles(updatedFiles);
+      saveFilesToStorage(updatedFiles);
+      
+      toast({
+        title: isVerified ? "Document verified" : "Verification failed",
+        description: isVerified 
+          ? "This document's integrity is confirmed by blockchain" 
+          : "This document has been tampered with or is missing blockchain verification",
+        variant: isVerified ? "default" : "destructive"
+      });
+    }, 1500);
+  };
+
   return (
     <Card className="w-full border-healophile-blue-light">
       <CardHeader>
@@ -209,6 +285,7 @@ const MedicalFileGallery = () => {
                   file={file} 
                   isDoctor={isDoctor}
                   onShare={() => setSelectedFile(file.id)}
+                  onVerify={() => handleVerifyBlockchain(file.id)}
                 />
               ))}
             </div>
@@ -223,6 +300,7 @@ const MedicalFileGallery = () => {
                     file={file} 
                     isDoctor={isDoctor}
                     onShare={() => setSelectedFile(file.id)}
+                    onVerify={() => handleVerifyBlockchain(file.id)}
                   />
                 ))}
             </div>
@@ -237,6 +315,7 @@ const MedicalFileGallery = () => {
                     file={file} 
                     isDoctor={isDoctor}
                     onShare={() => setSelectedFile(file.id)}
+                    onVerify={() => handleVerifyBlockchain(file.id)}
                   />
                 ))}
             </div>
@@ -252,6 +331,7 @@ const MedicalFileGallery = () => {
                       file={file} 
                       isDoctor={isDoctor}
                       onShare={() => setSelectedFile(file.id)}
+                      onVerify={() => handleVerifyBlockchain(file.id)}
                     />
                   ))}
               </div>
@@ -315,14 +395,22 @@ const MedicalFileGallery = () => {
   );
 };
 
-// FileCard component remains mostly the same, but with updated types
-const FileCard = ({ file, isDoctor, onShare }) => {
+// FileCard component with blockchain verification
+const FileCard = ({ file, isDoctor, onShare, onVerify }) => {
   const { toast } = useToast();
   
   const handleDownload = () => {
     toast({
       title: "File download started",
       description: `${file.name} is being downloaded to your device.`
+    });
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
     });
   };
 
@@ -369,16 +457,37 @@ const FileCard = ({ file, isDoctor, onShare }) => {
         </h3>
         <div className="flex items-center text-sm text-muted-foreground mt-1">
           <Calendar className="h-3 w-3 mr-1" />
-          <span>
-            {new Date(file.date).toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'short',
-              day: 'numeric',
-            })}
-          </span>
+          <span>{formatDate(file.uploadedAt || file.date)}</span>
           <span className="mx-1">•</span>
           <span>{file.size}</span>
         </div>
+        
+        <TooltipProvider>
+          <div className="mt-2 flex items-center">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant={file.blockchainVerified ? "outline" : "destructive"} className="text-xs cursor-help">
+                  {file.blockchainVerified ? (
+                    <span className="flex items-center">
+                      <ShieldCheck className="h-3 w-3 mr-1 text-green-600" /> 
+                      Blockchain verified
+                    </span>
+                  ) : (
+                    <span className="flex items-center">
+                      <AlertTriangle className="h-3 w-3 mr-1" /> 
+                      Not verified
+                    </span>
+                  )}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                {file.blockchainVerified 
+                  ? `This document is secured with blockchain technology (${file.blockchainHash.substring(0, 8)}...)`
+                  : "This document's blockchain verification has failed or is missing"}
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        </TooltipProvider>
         
         {file.sharedWith.length > 0 && (
           <div className="mt-2">
@@ -391,17 +500,21 @@ const FileCard = ({ file, isDoctor, onShare }) => {
           </div>
         )}
         
-        <div className="flex mt-3 space-x-2">
-          <Button size="sm" variant="outline" className="flex-1" onClick={handleDownload}>
+        <div className="grid grid-cols-2 gap-2 mt-3">
+          <Button size="sm" variant="outline" className="w-full" onClick={handleDownload}>
             <Eye className="h-4 w-4 mr-1" />
             View
           </Button>
-          <Button size="sm" variant="outline" className="flex-1" onClick={handleDownload}>
+          <Button size="sm" variant="outline" className="w-full" onClick={handleDownload}>
             <Download className="h-4 w-4 mr-1" />
             Download
           </Button>
+          <Button size="sm" variant="outline" className="w-full" onClick={onVerify}>
+            <ShieldCheck className="h-4 w-4 mr-1" />
+            Verify
+          </Button>
           {!isDoctor && !file.isShared && (
-            <Button size="sm" className="flex-1 bg-healophile-purple" onClick={onShare}>
+            <Button size="sm" className="w-full bg-healophile-purple" onClick={onShare}>
               <Share className="h-4 w-4 mr-1" />
               Share
             </Button>

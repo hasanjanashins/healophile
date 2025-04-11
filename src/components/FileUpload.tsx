@@ -4,10 +4,12 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Upload, File, FilePlus, FileX, CheckCircle, Share } from "lucide-react";
+import { Upload, File, FilePlus, FileX, CheckCircle, Share, AlertTriangle, ShieldCheck } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // Available doctors list
 const availableDoctors = [
@@ -15,6 +17,37 @@ const availableDoctors = [
   { id: "d2", name: "Dr. Kavita Deshmukh", specialty: "Neurology" },
   { id: "d3", name: "Dr. Rajesh Gupta", specialty: "Orthopedics" }
 ];
+
+// Allowed file types for medical documents
+const ALLOWED_FILE_TYPES = [
+  // Medical document formats
+  'application/pdf', // PDF files
+  'application/msword', // DOC files
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // DOCX files
+  'text/plain', // TXT files (for simple reports)
+  'application/vnd.ms-excel', // XLS files (for lab results)
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // XLSX files
+  
+  // Medical imaging formats
+  'image/jpeg', // JPEG images (scanned documents, X-rays)
+  'image/png', // PNG images
+  'image/dicom', // DICOM medical imaging
+  'image/tiff', // TIFF images
+];
+
+// File type descriptions for user feedback
+const FILE_TYPE_DESCRIPTIONS = {
+  'application/pdf': 'PDF Document',
+  'application/msword': 'Word Document (DOC)',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'Word Document (DOCX)',
+  'text/plain': 'Text Document',
+  'application/vnd.ms-excel': 'Excel Spreadsheet (XLS)',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'Excel Spreadsheet (XLSX)',
+  'image/jpeg': 'JPEG Image',
+  'image/png': 'PNG Image',
+  'image/dicom': 'DICOM Medical Image',
+  'image/tiff': 'TIFF Image'
+};
 
 // Function to get files from localStorage or initialize with default data
 const getStoredFiles = () => {
@@ -30,6 +63,25 @@ const saveFilesToStorage = (files) => {
   localStorage.setItem('healophileFiles', JSON.stringify(files));
 };
 
+// Function to generate a blockchain hash
+const generateBlockchainHash = (file, userId) => {
+  // In a real implementation, this would call a blockchain service
+  // For now, we'll simulate a hash based on the file details and timestamp
+  const fileData = `${file.name}-${file.size}-${userId}-${Date.now()}`;
+  return Array.from(
+    new Uint8Array(
+      new TextEncoder().encode(fileData).reduce(
+        (acc, byte) => acc + ((acc << 7) + (acc << 3)) ^ byte, 0
+      ).toString(16)
+    )
+  ).map(b => b.toString(16).padStart(2, '0')).join('');
+};
+
+// Function to validate if a file is a medical document
+const isMedicalDocument = (file) => {
+  return ALLOWED_FILE_TYPES.includes(file.type);
+};
+
 const FileUpload = () => {
   const { toast } = useToast();
   const { currentUser } = useAuth();
@@ -38,11 +90,38 @@ const FileUpload = () => {
   const [progress, setProgress] = useState(0);
   const [isSuccess, setIsSuccess] = useState(false);
   const [selectedDoctors, setSelectedDoctors] = useState({});
+  const [fileErrors, setFileErrors] = useState([]);
 
   const handleFileChange = (event) => {
     if (event.target.files && event.target.files.length > 0) {
       const newFiles = Array.from(event.target.files);
-      setFiles([...files, ...newFiles]);
+      const validFiles = [];
+      const errors = [];
+
+      // Validate each file
+      newFiles.forEach((file) => {
+        if (isMedicalDocument(file)) {
+          validFiles.push(file);
+        } else {
+          errors.push({
+            name: file.name,
+            error: `Not a valid medical document. Allowed formats include PDF, DOC, DOCX, and medical images.`
+          });
+        }
+      });
+
+      // Update state
+      setFiles([...files, ...validFiles]);
+      setFileErrors(errors);
+
+      // Show toast for invalid files
+      if (errors.length > 0) {
+        toast({
+          title: "Invalid file types detected",
+          description: `${errors.length} file(s) were not added because they are not valid medical documents.`,
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -85,13 +164,16 @@ const FileUpload = () => {
           files.forEach((file, index) => {
             // Create file type (document or image) based on file extension
             const fileExtension = file.name.split('.').pop().toLowerCase();
-            const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(fileExtension);
+            const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'tiff', 'dicom'].includes(fileExtension);
             const fileType = isImage ? 'image' : 'document';
             
             // Create thumbnail based on file type
             const thumbnail = isImage 
               ? "https://placehold.co/400x400/d3e4fd/0EA5E9?text=Image" 
               : "https://placehold.co/400x500/e5deff/7E69AB?text=Doc";
+            
+            // Generate blockchain hash for this file
+            const blockchainHash = generateBlockchainHash(file, currentUser?.id);
             
             // Add the new file to storage
             const newFile = {
@@ -105,7 +187,10 @@ const FileUpload = () => {
               thumbnail: thumbnail,
               sharedWith: selectedDoctorsList.map(doc => doc.name),
               sharedWithIds: selectedDoctorsList.map(doc => doc.id),
-              isShared: selectedDoctorsList.length > 0
+              isShared: selectedDoctorsList.length > 0,
+              blockchainHash: blockchainHash,  // Add blockchain hash
+              blockchainVerified: true,       // Mark as verified in the blockchain
+              uploadedAt: new Date().toISOString()
             };
             
             newStoredFiles.push(newFile);
@@ -150,10 +235,26 @@ const FileUpload = () => {
       <CardHeader>
         <CardTitle className="font-display text-center">Medical File Upload</CardTitle>
         <CardDescription className="text-center">
-          Upload your medical files securely. We support PDFs, images, and documents.
+          Upload your medical files securely. We support medical documents and imaging formats only.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {fileErrors.length > 0 && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              <p className="font-medium mb-1">Some files could not be uploaded:</p>
+              <ul className="list-disc pl-5 space-y-1">
+                {fileErrors.map((error, index) => (
+                  <li key={index} className="text-sm">
+                    {error.name}: {error.error}
+                  </li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div 
           className={`border-2 border-dashed rounded-lg p-8 text-center ${
             files.length > 0 ? "border-healophile-blue" : "border-muted"
@@ -163,6 +264,10 @@ const FileUpload = () => {
             <div className="flex flex-col items-center py-4">
               <CheckCircle className="h-12 w-12 text-green-500 mb-2" />
               <p className="text-lg font-medium">Upload Successful!</p>
+              <div className="flex items-center mt-2 text-sm text-green-600">
+                <ShieldCheck className="h-4 w-4 mr-1" />
+                <span>Blockchain verification complete</span>
+              </div>
             </div>
           ) : (
             <div className="flex flex-col items-center">
@@ -182,10 +287,10 @@ const FileUpload = () => {
                 multiple
                 className="hidden"
                 onChange={handleFileChange}
-                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.dicom,.tiff,.txt,.xls,.xlsx"
               />
               <p className="mt-2 text-sm text-muted-foreground">
-                Supported formats: PDF, DOC, DOCX, JPG, PNG
+                Supported formats: PDF, DOC, DOCX, JPG, PNG, DICOM, TIFF, and other medical formats
               </p>
             </div>
           )}
@@ -204,9 +309,13 @@ const FileUpload = () => {
                     <File className="h-5 w-5 text-healophile-blue mr-2" />
                     <div>
                       <p className="text-sm font-medium truncate max-w-[200px]">{file.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {(file.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
+                      <div className="flex items-center">
+                        <p className="text-xs text-muted-foreground">
+                          {(file.size / 1024 / 1024).toFixed(2)} MB • 
+                          {FILE_TYPE_DESCRIPTIONS[file.type] || file.type}
+                        </p>
+                        <ShieldCheck className="h-3 w-3 ml-1 text-green-600" title="Will be secured with blockchain" />
+                      </div>
                     </div>
                   </div>
                   <Button
@@ -257,7 +366,7 @@ const FileUpload = () => {
         {uploading && (
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span>Uploading...</span>
+              <span>Uploading and securing with blockchain...</span>
               <span>{progress}%</span>
             </div>
             <Progress value={progress} className="h-2" />

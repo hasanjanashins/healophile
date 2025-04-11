@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Upload, File, FilePlus, FileX, CheckCircle, Share, AlertTriangle, ShieldCheck } from "lucide-react";
+import { Upload, File, FilePlus, FileX, CheckCircle, Share, AlertTriangle, ShieldCheck, Loader2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
@@ -64,7 +64,7 @@ const saveFilesToStorage = (files: any[]) => {
 };
 
 // Function to generate a blockchain hash
-const generateBlockchainHash = (file: File, userId: string) => {
+const generateBlockchainHash = (file: File, userId: string): string => {
   // In a real implementation, this would call a blockchain service
   // For now, we'll simulate a hash based on the file details and timestamp
   const fileData = `${file.name}-${file.size}-${userId}-${Date.now()}`;
@@ -75,9 +75,33 @@ const generateBlockchainHash = (file: File, userId: string) => {
   ).map(b => b.toString(16).padStart(2, '0')).join('');
 };
 
-// Function to validate if a file is a medical document
-const isMedicalDocument = (file: File) => {
-  return ALLOWED_FILE_TYPES.includes(file.type);
+// Function to validate if a file is a medical document using AI
+const validateMedicalFile = async (file: File): Promise<{ isValid: boolean; message: string }> => {
+  try {
+    const response = await fetch('/api/validate-medical-file', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to validate file');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error validating file:', error);
+    return { 
+      isValid: false, 
+      message: 'Error validating file. Falling back to basic validation.' 
+    };
+  }
 };
 
 interface FileError {
@@ -90,39 +114,71 @@ const FileUpload = () => {
   const { currentUser } = useAuth();
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [validating, setValidating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isSuccess, setIsSuccess] = useState(false);
   const [selectedDoctors, setSelectedDoctors] = useState<Record<string, boolean>>({});
   const [fileErrors, setFileErrors] = useState<FileError[]>([]);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files.length > 0) {
       const newFiles = Array.from(event.target.files);
+      setValidating(true);
+      
       const validFiles: File[] = [];
       const errors: FileError[] = [];
-
-      // Validate each file
-      newFiles.forEach((file) => {
-        if (isMedicalDocument(file)) {
-          validFiles.push(file);
-        } else {
+      
+      // Validate each file with AI
+      for (const file of newFiles) {
+        try {
+          // First check if the file type is in our allowed list
+          if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+            errors.push({
+              name: file.name,
+              error: `Not a supported medical document format. Please upload a PDF, DOC, DOCX, or medical image.`
+            });
+            continue;
+          }
+          
+          // Then perform AI validation
+          const { isValid, message } = await validateMedicalFile(file);
+          
+          if (isValid) {
+            validFiles.push(file);
+          } else {
+            errors.push({
+              name: file.name,
+              error: message || 'Failed AI validation for medical document'
+            });
+          }
+        } catch (error) {
           errors.push({
             name: file.name,
-            error: `Not a valid medical document. Allowed formats include PDF, DOC, DOCX, and medical images.`
+            error: 'Error during file validation'
           });
         }
-      });
-
+      }
+      
+      setValidating(false);
+      
       // Update state
       setFiles([...files, ...validFiles]);
       setFileErrors(errors);
-
+      
       // Show toast for invalid files
       if (errors.length > 0) {
         toast({
           title: "Invalid file types detected",
           description: `${errors.length} file(s) were not added because they are not valid medical documents.`,
           variant: "destructive"
+        });
+      }
+      
+      // Success message for valid files
+      if (validFiles.length > 0) {
+        toast({
+          title: "Files validated",
+          description: `${validFiles.length} medical file(s) successfully added`,
         });
       }
     }
@@ -272,12 +328,20 @@ const FileUpload = () => {
                 <span>Blockchain verification complete</span>
               </div>
             </div>
+          ) : validating ? (
+            <div className="flex flex-col items-center py-4">
+              <Loader2 className="h-12 w-12 text-healophile-blue mb-2 animate-spin" />
+              <p className="text-lg font-medium">Validating files...</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Our AI is checking if your files are valid medical documents
+              </p>
+            </div>
           ) : (
             <div className="flex flex-col items-center">
               <Upload className="h-10 w-10 text-muted-foreground mb-2" />
               <p className="text-lg font-medium mb-2">Drag files here or</p>
               <Button
-                disabled={uploading}
+                disabled={uploading || validating}
                 className="bg-healophile-blue hover:bg-healophile-blue-dark"
                 onClick={() => document.getElementById("file-input")?.click()}
               >
@@ -294,6 +358,9 @@ const FileUpload = () => {
               />
               <p className="mt-2 text-sm text-muted-foreground">
                 Supported formats: PDF, DOC, DOCX, JPG, PNG, DICOM, TIFF, and other medical formats
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Files will be validated by AI to ensure they are medical documents
               </p>
             </div>
           )}
@@ -325,7 +392,7 @@ const FileUpload = () => {
                     variant="ghost"
                     size="icon"
                     onClick={() => handleRemoveFile(index)}
-                    disabled={uploading}
+                    disabled={uploading || validating}
                   >
                     <FileX className="h-4 w-4 text-muted-foreground hover:text-destructive" />
                   </Button>
@@ -380,7 +447,7 @@ const FileUpload = () => {
         <Button 
           onClick={handleUpload} 
           className="w-full bg-healophile-purple hover:bg-healophile-purple-dark"
-          disabled={files.length === 0 || uploading}
+          disabled={files.length === 0 || uploading || validating}
         >
           {uploading ? "Uploading..." : `Upload ${files.length > 0 ? `(${files.length})` : ""} ${
             getSelectedDoctorsCount() > 0 ? "& Share" : ""

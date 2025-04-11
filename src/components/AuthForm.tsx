@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Eye, EyeOff, Lock, Mail, User } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail, User, AlertCircle } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
@@ -57,19 +56,34 @@ const AuthForm = ({ type }: AuthFormProps) => {
   };
 
   const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    
+    if (!emailRegex.test(email)) {
+      return false;
+    }
+    
+    const domain = email.split('@')[1];
+    
+    return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Clear previous errors
     setErrors({});
     
-    // Validate email
     if (!validateEmail(formData.email)) {
       setErrors({ ...errors, email: "Please enter a valid email address" });
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid email address",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (formData.password.length < 6) {
+      setErrors({ ...errors, password: "Password must be at least 6 characters" });
       return;
     }
     
@@ -81,7 +95,6 @@ const AuthForm = ({ type }: AuthFormProps) => {
           description: `Welcome back${formData.role === "doctor" ? ", Dr." : ""}!`,
         });
         
-        // Redirect to appropriate dashboard
         if (formData.role === "doctor") {
           navigate("/doctor-dashboard");
         } else {
@@ -120,6 +133,7 @@ const AuthForm = ({ type }: AuthFormProps) => {
       <CardContent>
         {errors.general && (
           <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4 mr-2" />
             <AlertDescription>{errors.general}</AlertDescription>
           </Alert>
         )}

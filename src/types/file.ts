@@ -3,7 +3,7 @@
 export interface FileItem {
   id: string;
   name: string;
-  type: "document" | "image";
+  type: string; // Changed from specific types to allow any file type
   date: string;
   size: string;
   patientId: string;

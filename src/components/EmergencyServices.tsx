@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +17,8 @@ const hospitals = [
     address: "123 Medical Center Blvd",
     phone: "555-234-5678",
     services: ["Emergency", "Trauma Center", "ICU"],
-    image: "https://placehold.co/300x200/d3e4fd/0EA5E9?text=City+General"
+    image: "https://placehold.co/300x200/d3e4fd/0EA5E9?text=City+General",
+    location: { lat: 28.6139, lng: 77.2090 } // Delhi coordinates
   },
   {
     id: 2,
@@ -26,7 +28,8 @@ const hospitals = [
     address: "456 Healthcare Drive",
     phone: "555-987-6543",
     services: ["Emergency", "Pediatric ER", "Cardiology"],
-    image: "https://placehold.co/300x200/e5deff/7E69AB?text=Mercy+Medical"
+    image: "https://placehold.co/300x200/e5deff/7E69AB?text=Mercy+Medical",
+    location: { lat: 28.6304, lng: 77.2177 } // Near Delhi
   },
   {
     id: 3,
@@ -36,7 +39,8 @@ const hospitals = [
     address: "789 University Parkway",
     phone: "555-876-5432",
     services: ["Level 1 Trauma", "Emergency", "Stroke Center"],
-    image: "https://placehold.co/300x200/FDE1D3/F97316?text=University+Hospital"
+    image: "https://placehold.co/300x200/FDE1D3/F97316?text=University+Hospital",
+    location: { lat: 28.6258, lng: 77.2209 } // Near Delhi
   }
 ];
 
@@ -69,6 +73,9 @@ const EmergencyServices = () => {
   const [location, setLocation] = useState<{lat: number; lng: number} | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [ambulanceRequested, setAmbulanceRequested] = useState(false);
+  const [mapVisible, setMapVisible] = useState(false);
+  const [selectedHospital, setSelectedHospital] = useState<number | null>(null);
+  const [ambulancePosition, setAmbulancePosition] = useState<{lat: number; lng: number} | null>(null);
 
   const handleEmergencyCall = (number: string, name: string) => {
     toast({
@@ -85,13 +92,39 @@ const EmergencyServices = () => {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
-          setLocation({ lat: latitude, lng: longitude });
+          const userLocation = { lat: latitude, lng: longitude };
+          setLocation(userLocation);
           setIsLocating(false);
+          setMapVisible(true);
           
           toast({
             title: "Location shared",
             description: "Your current location has been shared with emergency services.",
           });
+          
+          // Find the nearest hospital
+          let nearest = 0;
+          let minDistance = Number.MAX_VALUE;
+          
+          hospitals.forEach((hospital, index) => {
+            const distance = calculateDistance(
+              userLocation.lat, userLocation.lng,
+              hospital.location.lat, hospital.location.lng
+            );
+            
+            if (distance < minDistance) {
+              minDistance = distance;
+              nearest = index;
+            }
+          });
+          
+          setSelectedHospital(nearest);
+          
+          // Set initial ambulance position at the selected hospital
+          setAmbulancePosition(hospitals[nearest].location);
+          
+          // Simulate ambulance moving towards the user
+          simulateAmbulanceMovement(hospitals[nearest].location, userLocation);
         },
         (error) => {
           console.error("Error getting location:", error);
@@ -114,6 +147,45 @@ const EmergencyServices = () => {
     }
   };
   
+  // Calculate distance between two points using Haversine formula
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371; // Radius of the earth in km
+    const dLat = deg2rad(lat2 - lat1);
+    const dLon = deg2rad(lon2 - lon1);
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2)
+    ; 
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+    const d = R * c; // Distance in km
+    return d;
+  };
+  
+  const deg2rad = (deg: number) => {
+    return deg * (Math.PI/180);
+  };
+  
+  // Simulate ambulance movement
+  const simulateAmbulanceMovement = (start: {lat: number; lng: number}, end: {lat: number; lng: number}) => {
+    const steps = 20; // Number of steps for animation
+    let currentStep = 0;
+    
+    const interval = setInterval(() => {
+      currentStep++;
+      
+      if (currentStep <= steps) {
+        // Linear interpolation between points
+        const newLat = start.lat + (end.lat - start.lat) * (currentStep / steps);
+        const newLng = start.lng + (end.lng - start.lng) * (currentStep / steps);
+        
+        setAmbulancePosition({ lat: newLat, lng: newLng });
+      } else {
+        clearInterval(interval);
+      }
+    }, 1000);
+  };
+  
   const requestAmbulance = () => {
     if (!location) {
       shareLocation();
@@ -126,6 +198,7 @@ const EmergencyServices = () => {
       }, 2000);
     } else {
       setAmbulanceRequested(true);
+      setMapVisible(true);
       toast({
         title: "Ambulance dispatched",
         description: "An ambulance has been dispatched to your location and will arrive in approximately 8 minutes.",
@@ -135,6 +208,13 @@ const EmergencyServices = () => {
   
   const resetAmbulanceStatus = () => {
     setAmbulanceRequested(false);
+    setMapVisible(false);
+    setAmbulancePosition(null);
+  };
+  
+  // Close the map view
+  const closeMapView = () => {
+    setMapVisible(false);
   };
   
   return (
@@ -157,6 +237,74 @@ const EmergencyServices = () => {
         
         <TabsContent value="options" className="pt-6">
           <CardContent className="space-y-6">
+            {mapVisible && location && (
+              <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center">
+                <div className="bg-background p-4 rounded-lg shadow-lg w-[90%] max-w-2xl">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xl font-medium">Emergency Response Map</h3>
+                    <Button variant="ghost" size="sm" onClick={closeMapView}>
+                      ✕
+                    </Button>
+                  </div>
+                  
+                  <div className="relative w-full h-[400px] bg-gray-100 rounded-md overflow-hidden mb-4">
+                    <iframe 
+                      title="Emergency Location Map"
+                      width="100%" 
+                      height="100%" 
+                      frameBorder="0" 
+                      style={{ border: 0 }}
+                      src={`https://www.google.com/maps/embed/v1/view?key=AIzaSyBIwzALxUPNbatRBj3Xi1Uhp0fFzwWNBkE&center=${location.lat},${location.lng}&zoom=15&maptype=roadmap`} 
+                      allowFullScreen
+                    />
+                    
+                    {/* Map overlays rendered as absolute positioned elements */}
+                    <div className="absolute left-0 bottom-0 right-0 p-4 bg-gradient-to-t from-black/70 to-transparent text-white">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-bold">Your Location</p>
+                          <p className="text-sm">{location.lat.toFixed(6)}, {location.lng.toFixed(6)}</p>
+                        </div>
+                        {ambulanceRequested && (
+                          <div className="bg-healophile-emergency/90 rounded-full px-3 py-1 text-sm flex items-center">
+                            <Ambulance className="h-3 w-3 mr-1" /> 
+                            <span>ETA: 8 min</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {ambulanceRequested && selectedHospital !== null && (
+                    <div className="bg-gray-50 p-3 rounded-md mb-4">
+                      <div className="flex items-start">
+                        <div className="bg-healophile-blue/10 p-2 rounded-full">
+                          <Ambulance className="h-5 w-5 text-healophile-blue" />
+                        </div>
+                        <div className="ml-3">
+                          <h4 className="font-medium">Ambulance Dispatched</h4>
+                          <p className="text-sm text-muted-foreground">
+                            From {hospitals[selectedHospital].name} • ETA: 8 minutes
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="flex space-x-2">
+                    <Button variant="outline" className="flex-1" onClick={closeMapView}>
+                      Close Map
+                    </Button>
+                    {!ambulanceRequested && (
+                      <Button className="flex-1 bg-healophile-emergency" onClick={requestAmbulance}>
+                        <Ambulance className="mr-2 h-4 w-4" /> Request Ambulance
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+            
             {ambulanceRequested ? (
               <div className="bg-green-50 border border-green-100 rounded-lg p-6 text-center animate-fade-in">
                 <div className="flex justify-center mb-4">
@@ -173,9 +321,16 @@ const EmergencyServices = () => {
                   Please stay where you are and keep your phone nearby.
                   An emergency responder may call you for further details.
                 </p>
-                <Button variant="outline" onClick={resetAmbulanceStatus}>
-                  Return to Emergency Options
-                </Button>
+                <div className="flex space-x-2 justify-center">
+                  <Button variant="outline" onClick={resetAmbulanceStatus}>
+                    Return to Emergency Options
+                  </Button>
+                  {location && (
+                    <Button className="bg-healophile-blue" onClick={() => setMapVisible(true)}>
+                      <MapPin className="mr-2 h-4 w-4" /> View on Map
+                    </Button>
+                  )}
+                </div>
               </div>
             ) : (
               <>

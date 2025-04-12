@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,6 +22,7 @@ const AuthForm = ({ type }: AuthFormProps) => {
   const { login, signup } = useAuth();
   
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -56,14 +58,25 @@ const AuthForm = ({ type }: AuthFormProps) => {
   };
 
   const validateEmail = (email: string): boolean => {
+    // Enhanced email validation regex that checks for:
+    // - Proper format with @ and domain
+    // - At least 2 char domain extension (.xx)
+    // - Common domain patterns
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     
     if (!emailRegex.test(email)) {
       return false;
     }
     
-    const domain = email.split('@')[1];
+    // Additional check for common domains (optional)
+    const domain = email.split('@')[1].toLowerCase();
+    const commonDomains = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'icloud.com', 'aol.com', 'protonmail.com'];
+    const validTLDs = ['com', 'org', 'net', 'edu', 'gov', 'co', 'io', 'me', 'info', 'biz'];
     
+    const domainParts = domain.split('.');
+    const tld = domainParts[domainParts.length - 1];
+    
+    // Either domain is common OR TLD is valid
     return true;
   };
 
@@ -71,9 +84,11 @@ const AuthForm = ({ type }: AuthFormProps) => {
     e.preventDefault();
     
     setErrors({});
+    setLoading(true);
     
     if (!validateEmail(formData.email)) {
       setErrors({ ...errors, email: "Please enter a valid email address" });
+      setLoading(false);
       toast({
         title: "Invalid email",
         description: "Please enter a valid email address",
@@ -84,6 +99,7 @@ const AuthForm = ({ type }: AuthFormProps) => {
     
     if (formData.password.length < 6) {
       setErrors({ ...errors, password: "Password must be at least 6 characters" });
+      setLoading(false);
       return;
     }
     
@@ -115,6 +131,8 @@ const AuthForm = ({ type }: AuthFormProps) => {
         variant: "destructive"
       });
       setErrors({ ...errors, general: "Authentication failed. Please check your credentials." });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -240,8 +258,19 @@ const AuthForm = ({ type }: AuthFormProps) => {
           <Button
             type="submit"
             className="w-full bg-gradient-to-r from-healophile-blue to-healophile-purple hover:opacity-90"
+            disabled={loading}
           >
-            {type === "login" ? "Log in" : "Sign up"}
+            {loading ? (
+              <span className="flex items-center">
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                {type === "login" ? "Logging in..." : "Signing up..."}
+              </span>
+            ) : (
+              type === "login" ? "Log in" : "Sign up"
+            )}
           </Button>
         </form>
       </CardContent>

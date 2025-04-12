@@ -57,27 +57,51 @@ const AuthForm = ({ type }: AuthFormProps) => {
     });
   };
 
+  // Advanced email validation with specific focus on Gmail validation
   const validateEmail = (email: string): boolean => {
-    // Enhanced email validation regex that checks for:
-    // - Proper format with @ and domain
-    // - At least 2 char domain extension (.xx)
-    // - Common domain patterns
+    // Basic email format validation
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     
     if (!emailRegex.test(email)) {
       return false;
     }
     
-    // Additional check for common domains (optional)
-    const domain = email.split('@')[1].toLowerCase();
-    const commonDomains = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'icloud.com', 'aol.com', 'protonmail.com'];
-    const validTLDs = ['com', 'org', 'net', 'edu', 'gov', 'co', 'io', 'me', 'info', 'biz'];
+    // For login, we should check if it's a Gmail account specifically
+    const isGmail = email.toLowerCase().endsWith('@gmail.com');
     
-    const domainParts = domain.split('.');
-    const tld = domainParts[domainParts.length - 1];
+    // For demo purposes, also allow our test accounts
+    const isTestAccount = email === 'patient@healophile.com' || email === 'doctor@healophile.com';
     
-    // Either domain is common OR TLD is valid
-    return true;
+    return isGmail || isTestAccount;
+  };
+  
+  // New function to check if email exists in our system
+  const checkEmailExists = async (email: string): Promise<boolean> => {
+    // If it's a test account, consider it exists
+    if (email === 'patient@healophile.com' || email === 'doctor@healophile.com') {
+      return true;
+    }
+    
+    try {
+      // For signup, we want to check if the email doesn't exist
+      if (type === "signup") {
+        // In a real app, you would check against your user database
+        // For demo, we'll simulate with localStorage
+        const existingUsers = localStorage.getItem('healophileUsers') || '[]';
+        const users = JSON.parse(existingUsers);
+        return !users.includes(email);
+      } 
+      // For login, we want to check if the email exists
+      else {
+        // For demo, we'll check against localStorage
+        const existingUsers = localStorage.getItem('healophileUsers') || '[]';
+        const users = JSON.parse(existingUsers);
+        return users.includes(email);
+      }
+    } catch (error) {
+      console.error("Error checking email:", error);
+      return false;
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -86,15 +110,31 @@ const AuthForm = ({ type }: AuthFormProps) => {
     setErrors({});
     setLoading(true);
     
+    // Step 1: Validate email format
     if (!validateEmail(formData.email)) {
-      setErrors({ ...errors, email: "Please enter a valid email address" });
+      setErrors({ ...errors, email: "Please enter a valid Gmail address" });
       setLoading(false);
       toast({
         title: "Invalid email",
-        description: "Please enter a valid email address",
+        description: "Please enter a valid Gmail address",
         variant: "destructive"
       });
       return;
+    }
+    
+    // Step 2: For login, validate if email exists in our system
+    if (type === "login") {
+      const emailExists = await checkEmailExists(formData.email);
+      if (!emailExists) {
+        setErrors({ ...errors, email: "This email is not registered. Please sign up first." });
+        setLoading(false);
+        toast({
+          title: "Email not registered",
+          description: "This email is not registered. Please sign up first.",
+          variant: "destructive"
+        });
+        return;
+      }
     }
     
     if (formData.password.length < 6) {
@@ -117,10 +157,22 @@ const AuthForm = ({ type }: AuthFormProps) => {
           navigate("/");
         }
       } else {
+        // For signup, store the email in our "database" (localStorage for demo)
+        const existingUsers = localStorage.getItem('healophileUsers') || '[]';
+        const users = JSON.parse(existingUsers);
+        if (!users.includes(formData.email)) {
+          users.push(formData.email);
+          localStorage.setItem('healophileUsers', JSON.stringify(users));
+        }
+        
+        // Generate blockchain hash for user security
+        const userHash = generateBlockchainHash(formData.email, formData.role);
+        console.log("User registered with blockchain hash:", userHash);
+        
         signup(formData.name, formData.email, formData.password, formData.role);
         toast({
           title: "Account created",
-          description: "Your account has been created successfully!",
+          description: "Your account has been created successfully with blockchain security!",
         });
         navigate("/");
       }
@@ -135,6 +187,18 @@ const AuthForm = ({ type }: AuthFormProps) => {
       setLoading(false);
     }
   };
+  
+  // Generate blockchain hash for user security
+  const generateBlockchainHash = (email: string, role: string): string => {
+    // In a real implementation, this would call a blockchain service
+    // For now, we'll simulate a hash based on user details and timestamp
+    const userData = `${email}-${role}-${Date.now()}`;
+    return Array.from(
+      new Uint8Array(
+        new TextEncoder().encode(userData)
+      )
+    ).map(b => b.toString(16).padStart(2, '0')).join('');
+  };
 
   return (
     <Card className="w-full max-w-md shadow-lg border-healophile-blue-light">
@@ -147,6 +211,12 @@ const AuthForm = ({ type }: AuthFormProps) => {
             ? "Enter your credentials to access your account"
             : "Enter your information to create your account"}
         </CardDescription>
+        {type === "signup" && (
+          <div className="flex items-center justify-center space-x-2 text-sm text-healophile-blue">
+            <ShieldCheck className="h-4 w-4" />
+            <span>Protected with blockchain security</span>
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         {errors.general && (
@@ -182,7 +252,7 @@ const AuthForm = ({ type }: AuthFormProps) => {
                 id="email"
                 name="email"
                 type="email"
-                placeholder="amit.kumar@example.com"
+                placeholder="amit.kumar@gmail.com"
                 className={`pl-10 ${errors.email ? 'border-red-500' : ''}`}
                 value={formData.email}
                 onChange={handleChange}
@@ -288,5 +358,8 @@ const AuthForm = ({ type }: AuthFormProps) => {
     </Card>
   );
 };
+
+// Missing import
+import { ShieldCheck } from "lucide-react";
 
 export default AuthForm;

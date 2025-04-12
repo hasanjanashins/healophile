@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -147,7 +146,6 @@ const EmergencyServices = () => {
     }
   };
   
-  // Calculate distance between two points using Haversine formula
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371; // Radius of the earth in km
     const dLat = deg2rad(lat2 - lat1);
@@ -166,7 +164,6 @@ const EmergencyServices = () => {
     return deg * (Math.PI/180);
   };
   
-  // Simulate ambulance movement
   const simulateAmbulanceMovement = (start: {lat: number; lng: number}, end: {lat: number; lng: number}) => {
     const steps = 20; // Number of steps for animation
     let currentStep = 0;
@@ -212,11 +209,129 @@ const EmergencyServices = () => {
     setAmbulancePosition(null);
   };
   
-  // Close the map view
   const closeMapView = () => {
     setMapVisible(false);
   };
-  
+
+  const renderMapView = () => {
+    if (!location) return null;
+    
+    return (
+      <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center">
+        <div className="bg-background p-4 rounded-lg shadow-lg w-[90%] max-w-2xl">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-medium">Emergency Response Map</h3>
+            <Button variant="ghost" size="sm" onClick={closeMapView}>
+              ✕
+            </Button>
+          </div>
+          
+          <div className="relative w-full h-[400px] bg-gray-100 rounded-md overflow-hidden mb-4">
+            <div className="w-full h-full relative bg-blue-50 flex items-center justify-center">
+              <div className="absolute inset-0 bg-blue-100/50">
+                <div className="w-full h-full" style={{
+                  backgroundImage: `linear-gradient(90deg, rgba(0,0,0,0.05) 1px, transparent 1px), 
+                                    linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px)`,
+                  backgroundSize: '20px 20px'
+                }}></div>
+                
+                <div className="absolute" style={{
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)'
+                }}>
+                  <div className="h-4 w-4 bg-blue-600 rounded-full animate-ping absolute"></div>
+                  <div className="h-4 w-4 bg-blue-600 rounded-full relative"></div>
+                </div>
+                
+                {selectedHospital !== null && (
+                  <div className="absolute" style={{
+                    top: '30%',
+                    left: '30%',
+                  }}>
+                    <div className="h-4 w-4 bg-healophile-purple rounded-full"></div>
+                  </div>
+                )}
+                
+                {ambulancePosition && (
+                  <div className="absolute" style={{
+                    top: '40%',
+                    left: '40%',
+                    transform: 'translate(-50%, -50%)'
+                  }}>
+                    <div className="h-5 w-5 bg-healophile-emergency rounded-full flex items-center justify-center">
+                      <Ambulance className="h-3 w-3 text-white" />
+                    </div>
+                  </div>
+                )}
+
+                <svg className="absolute inset-0 w-full h-full" style={{ 
+                  overflow: 'visible', 
+                  zIndex: 0 
+                }}>
+                  {selectedHospital !== null && (
+                    <path 
+                      d="M30%,30% Q40%,40% 50%,50%" 
+                      stroke="rgba(220, 38, 38, 0.6)" 
+                      strokeWidth="3" 
+                      fill="none" 
+                      strokeDasharray="5,5"
+                    />
+                  )}
+                </svg>
+              </div>
+              <div className="absolute z-10 text-gray-600 font-medium">
+                Demo Map View
+              </div>
+            </div>
+            
+            <div className="absolute left-0 bottom-0 right-0 p-4 bg-gradient-to-t from-black/70 to-transparent text-white">
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="font-bold">Your Location</p>
+                  <p className="text-sm">{location.lat.toFixed(6)}, {location.lng.toFixed(6)}</p>
+                </div>
+                {ambulanceRequested && (
+                  <div className="bg-healophile-emergency/90 rounded-full px-3 py-1 text-sm flex items-center">
+                    <Ambulance className="h-3 w-3 mr-1" /> 
+                    <span>ETA: 8 min</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          {ambulanceRequested && selectedHospital !== null && (
+            <div className="bg-gray-50 p-3 rounded-md mb-4">
+              <div className="flex items-start">
+                <div className="bg-healophile-blue/10 p-2 rounded-full">
+                  <Ambulance className="h-5 w-5 text-healophile-blue" />
+                </div>
+                <div className="ml-3">
+                  <h4 className="font-medium">Ambulance Dispatched</h4>
+                  <p className="text-sm text-muted-foreground">
+                    From {hospitals[selectedHospital].name} • ETA: 8 minutes
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <div className="flex space-x-2">
+            <Button variant="outline" className="flex-1" onClick={closeMapView}>
+              Close Map
+            </Button>
+            {!ambulanceRequested && (
+              <Button className="flex-1 bg-healophile-emergency" onClick={requestAmbulance}>
+                <Ambulance className="mr-2 h-4 w-4" /> Request Ambulance
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <Card className="w-full border-healophile-emergency animate-fade-in">
       <CardHeader className="bg-gradient-to-r from-healophile-emergency/20 to-healophile-emergency/5">
@@ -237,73 +352,7 @@ const EmergencyServices = () => {
         
         <TabsContent value="options" className="pt-6">
           <CardContent className="space-y-6">
-            {mapVisible && location && (
-              <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center">
-                <div className="bg-background p-4 rounded-lg shadow-lg w-[90%] max-w-2xl">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-xl font-medium">Emergency Response Map</h3>
-                    <Button variant="ghost" size="sm" onClick={closeMapView}>
-                      ✕
-                    </Button>
-                  </div>
-                  
-                  <div className="relative w-full h-[400px] bg-gray-100 rounded-md overflow-hidden mb-4">
-                    <iframe 
-                      title="Emergency Location Map"
-                      width="100%" 
-                      height="100%" 
-                      frameBorder="0" 
-                      style={{ border: 0 }}
-                      src={`https://www.google.com/maps/embed/v1/view?key=AIzaSyBIwzALxUPNbatRBj3Xi1Uhp0fFzwWNBkE&center=${location.lat},${location.lng}&zoom=15&maptype=roadmap`} 
-                      allowFullScreen
-                    />
-                    
-                    {/* Map overlays rendered as absolute positioned elements */}
-                    <div className="absolute left-0 bottom-0 right-0 p-4 bg-gradient-to-t from-black/70 to-transparent text-white">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="font-bold">Your Location</p>
-                          <p className="text-sm">{location.lat.toFixed(6)}, {location.lng.toFixed(6)}</p>
-                        </div>
-                        {ambulanceRequested && (
-                          <div className="bg-healophile-emergency/90 rounded-full px-3 py-1 text-sm flex items-center">
-                            <Ambulance className="h-3 w-3 mr-1" /> 
-                            <span>ETA: 8 min</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {ambulanceRequested && selectedHospital !== null && (
-                    <div className="bg-gray-50 p-3 rounded-md mb-4">
-                      <div className="flex items-start">
-                        <div className="bg-healophile-blue/10 p-2 rounded-full">
-                          <Ambulance className="h-5 w-5 text-healophile-blue" />
-                        </div>
-                        <div className="ml-3">
-                          <h4 className="font-medium">Ambulance Dispatched</h4>
-                          <p className="text-sm text-muted-foreground">
-                            From {hospitals[selectedHospital].name} • ETA: 8 minutes
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div className="flex space-x-2">
-                    <Button variant="outline" className="flex-1" onClick={closeMapView}>
-                      Close Map
-                    </Button>
-                    {!ambulanceRequested && (
-                      <Button className="flex-1 bg-healophile-emergency" onClick={requestAmbulance}>
-                        <Ambulance className="mr-2 h-4 w-4" /> Request Ambulance
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
+            {mapVisible && location && renderMapView()}
             
             {ambulanceRequested ? (
               <div className="bg-green-50 border border-green-100 rounded-lg p-6 text-center animate-fade-in">

@@ -10,6 +10,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 const Emergency = () => {
   const [showMap, setShowMap] = useState(false);
 
+  const handleShareLocation = () => {
+    setShowMap(true);
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -25,7 +29,7 @@ const Emergency = () => {
             <TabsList className="w-full grid grid-cols-3 mb-6">
               <TabsTrigger value="contacts">Emergency Contacts</TabsTrigger>
               <TabsTrigger value="beds">Hospital Bed Availability</TabsTrigger>
-              <TabsTrigger value="location" onClick={() => setShowMap(true)}>Share My Location</TabsTrigger>
+              <TabsTrigger value="location">Share My Location</TabsTrigger>
             </TabsList>
             <TabsContent value="contacts">
               <EmergencyServices />
@@ -57,7 +61,7 @@ const Emergency = () => {
                   ) : (
                     <div className="flex justify-center">
                       <button 
-                        onClick={() => setShowMap(true)}
+                        onClick={handleShareLocation}
                         className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md shadow-sm transition-colors"
                       >
                         Share My Location

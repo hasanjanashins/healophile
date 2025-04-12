@@ -78,7 +78,8 @@ const generateBlockchainHash = (file: File, userId: string): string => {
 // Function to validate if a file is a medical document using AI
 const validateMedicalFile = async (file: File): Promise<{ isValid: boolean; message: string }> => {
   try {
-    const response = await fetch('/api/validate-medical-file', {
+    // Direct call to Supabase Edge Function
+    const response = await fetch('https://qeqffkhudpfnrjoyirlx.supabase.co/functions/v1/validate-medical-file', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -94,7 +95,9 @@ const validateMedicalFile = async (file: File): Promise<{ isValid: boolean; mess
       throw new Error('Failed to validate file');
     }
 
-    return await response.json();
+    const result = await response.json();
+    console.log('Validation result:', result);
+    return result;
   } catch (error) {
     console.error('Error validating file:', error);
     return { 

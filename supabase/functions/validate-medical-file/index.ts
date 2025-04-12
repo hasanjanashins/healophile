@@ -28,13 +28,20 @@ serve(async (req) => {
       'image/jpeg', 'image/png', 'image/dicom', 'image/tiff'
     ];
     
-    // Enhanced medical keywords list for better medical file detection
+    // Enhanced medical keywords list for better medical file detection - greatly expanded
     const medicalKeywords = [
       // Document types
-      'medical', 'health', 'patient', 'doctor', 'hospital', 'clinic', 'lab', 'test',
+      'medical', 'health', 'patient', 'doctor', 'hospital', 'clinic', 'lab', 'test', 
       'report', 'scan', 'mri', 'ct', 'xray', 'x-ray', 'ultrasound', 'diagnosis', 'prescription',
       'treatment', 'medication', 'therapy', 'surgery', 'blood', 'record', 'history', 'consultation',
       'referral', 'radiology', 'pathology', 'ecg', 'ekg', 'biopsy',
+      
+      // Lab report specific terms
+      'lab report', 'laboratory', 'specimen', 'sample', 'result', 'reference range', 'abnormal', 'normal',
+      'positive', 'negative', 'reactive', 'non-reactive', 'elevated', 'depressed', 'analysis',
+      
+      // Patient identifiers
+      'name', 'patient name', 'patient id', 'mrn', 'dob', 'date of birth', 'age', 'gender', 'patient information',
       
       // Medical specialties
       'cardio', 'neuro', 'ortho', 'pediatric', 'dental', 'ophthalmology', 'dermatology',
@@ -46,7 +53,17 @@ serve(async (req) => {
       'admission', 'pharmacy',
       
       // Specific test names
-      'hemoglobin', 'glucose', 'creatinine', 'lipid', 'cbc', 'panel', 'culture'
+      'hemoglobin', 'glucose', 'creatinine', 'lipid', 'cbc', 'panel', 'culture', 'white blood cell',
+      'red blood cell', 'platelet', 'albumin', 'protein', 'bilirubin', 'alkaline phosphatase',
+      'triglycerides', 'troponin', 'electrolyte', 'sodium', 'potassium', 'chloride', 'bicarbonate',
+      'calcium', 'urea', 'magnesium', 'phosphate', 'uric acid', 'amylase', 'tsh', 't3', 't4',
+      'psa', 'inr', 'pt', 'ptt', 'a1c', 'hba1c', 'esr', 'crp', 'alt', 'ast', 'ldh',
+      'mammogram', 'pap smear', 'colonoscopy', 'endoscopy', 
+      
+      // Common lab report terminology
+      'differential', 'quantitative', 'qualitative', 'serology', 'hematology', 'microbiology',
+      'cytology', 'histology', 'toxicology', 'immunology', 'molecular', 'genetic', 'biochemistry',
+      'urinalysis', 'stool', 'fluid', 'smear', 'culture', 'sensitivity', 'titre', 'titer'
     ];
 
     // Check file type
@@ -67,12 +84,8 @@ serve(async (req) => {
     const medicalExtensions = ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', '.dcm', '.dicom', '.tiff', '.txt', '.xls', '.xlsx'];
     const hasValidExtension = medicalExtensions.some(ext => fileNameLower.endsWith(ext));
     
-    // We'll consider a file medical if:
-    // 1. It has a valid file type AND (has keywords OR has valid size)
-    // OR
-    // 2. It has a medical extension AND has valid size
-    const isMedicalFile = (isAllowedType && (hasMedicalKeyword || isValidSize)) || 
-                           (hasValidExtension && isValidSize);
+    // MUCH more permissive medical file detection - allow file if ANY validation passes
+    const isMedicalFile = isAllowedType || hasMedicalKeyword || (hasValidExtension && isValidSize);
     
     // Blockchain verification for medical document (simulate)
     const blockchainVerified = isMedicalFile;
@@ -84,7 +97,7 @@ serve(async (req) => {
     } else {
       if (!isAllowedType && !hasValidExtension) {
         message = "Not a supported medical file format. Please upload a PDF, DOC, DOCX, or medical image.";
-      } else if (!hasMedicalKeyword && !isValidSize) {
+      } else {
         message = "This file doesn't appear to be a medical document. Please ensure you're uploading a relevant medical file.";
       }
     }

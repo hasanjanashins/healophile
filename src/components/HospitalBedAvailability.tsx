@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import BedBookingDialog from "@/components/BedBookingDialog";
 
 // Sample data for hospital beds
 const hospitalData = [
@@ -95,6 +96,8 @@ const HospitalBedAvailability = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterSpecialty, setFilterSpecialty] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedHospital, setSelectedHospital] = useState(null);
+  const [showBookingDialog, setShowBookingDialog] = useState(false);
   
   const filteredHospitals = hospitalData.filter(hospital => {
     const matchesSearch = hospital.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -217,7 +220,14 @@ const HospitalBedAvailability = () => {
           <TabsContent value="all" className="mt-0">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {filteredHospitals.length > 0 ? filteredHospitals.map(hospital => (
-                <HospitalCard key={hospital.id} hospital={hospital} />
+                <HospitalCard 
+                  key={hospital.id} 
+                  hospital={hospital} 
+                  onBookBed={(hospital) => {
+                    setSelectedHospital(hospital);
+                    setShowBookingDialog(true);
+                  }}
+                />
               )) : (
                 <div className="col-span-2 flex flex-col items-center justify-center py-12">
                   <Building2 className="h-12 w-12 text-muted-foreground mb-2" />
@@ -234,7 +244,14 @@ const HospitalBedAvailability = () => {
                 filteredHospitals
                   .filter(h => h.availableBeds > 0)
                   .map(hospital => (
-                    <HospitalCard key={hospital.id} hospital={hospital} />
+                    <HospitalCard 
+                      key={hospital.id} 
+                      hospital={hospital}
+                      onBookBed={(hospital) => {
+                        setSelectedHospital(hospital);
+                        setShowBookingDialog(true);
+                      }}
+                    />
                   )) : (
                     <div className="col-span-2 flex flex-col items-center justify-center py-12">
                       <XCircle className="h-12 w-12 text-muted-foreground mb-2" />
@@ -251,7 +268,14 @@ const HospitalBedAvailability = () => {
                 filteredHospitals
                   .filter(h => h.facilities.some(f => f.includes("Emergency") || f.includes("Ambulance")))
                   .map(hospital => (
-                    <HospitalCard key={hospital.id} hospital={hospital} />
+                    <HospitalCard 
+                      key={hospital.id} 
+                      hospital={hospital}
+                      onBookBed={(hospital) => {
+                        setSelectedHospital(hospital);
+                        setShowBookingDialog(true);
+                      }}
+                    />
                   )) : (
                     <div className="col-span-2 flex flex-col items-center justify-center py-12">
                       <Ambulance className="h-12 w-12 text-muted-foreground mb-2" />
@@ -263,11 +287,20 @@ const HospitalBedAvailability = () => {
           </TabsContent>
         </Tabs>
       </CardContent>
+      
+      <BedBookingDialog
+        isOpen={showBookingDialog}
+        onClose={() => {
+          setShowBookingDialog(false);
+          setSelectedHospital(null);
+        }}
+        hospital={selectedHospital}
+      />
     </Card>
   );
 };
 
-const HospitalCard = ({ hospital }) => {
+const HospitalCard = ({ hospital, onBookBed }) => {
   return (
     <div className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all">
       <div className="relative h-40">
@@ -326,7 +359,10 @@ const HospitalCard = ({ hospital }) => {
         </div>
         
         <div className="mt-4">
-          <Button className="w-full bg-healophile-blue hover:bg-healophile-blue-dark">
+          <Button 
+            className="w-full bg-healophile-blue hover:bg-healophile-blue-dark"
+            onClick={() => onBookBed(hospital)}
+          >
             View Details & Contact
           </Button>
         </div>

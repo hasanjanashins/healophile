@@ -63,23 +63,23 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-				// Custom Healophile colors
+				// Custom Healophile colors - Light theme optimized
 				healophile: {
 					blue: {
-						light: '#D3E4FD',
-						DEFAULT: '#0EA5E9',
-						dark: '#0284C7',
+						light: '#E8F4FD',
+						DEFAULT: '#7DD3FC',
+						dark: '#0EA5E9',
 					},
 					purple: {
-						light: '#E5DEFF',
-						DEFAULT: '#9b87f5',
-						dark: '#7E69AB',
+						light: '#F0EBFF',
+						DEFAULT: '#C4B5FD',
+						dark: '#9b87f5',
 					},
 					pink: {
-						light: '#FFDEE2',
-						DEFAULT: '#F472B6',
+						light: '#FFEEF0',
+						DEFAULT: '#FBCFE8',
 					},
-					emergency: '#EF4444',
+					emergency: '#FCA5A5',
 				},
 			},
 			borderRadius: {

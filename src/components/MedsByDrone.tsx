@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/components/ui/use-toast";
 import { 
   Plane, 
   Package, 
@@ -17,14 +18,19 @@ import {
   Bandage,
   Activity,
   Stethoscope,
-  Shield
+  Shield,
+  Navigation
 } from "lucide-react";
 
 const MedsByDrone = () => {
+  const { toast } = useToast();
   const [medicineName, setMedicineName] = useState("");
   const [urgency, setUrgency] = useState("");
   const [deliveryRequested, setDeliveryRequested] = useState(false);
   const [selectedFirstAidKit, setSelectedFirstAidKit] = useState("");
+  const [isLocating, setIsLocating] = useState(false);
+  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [showLocationStep, setShowLocationStep] = useState(false);
 
   const emergencyMedicines = [
     { name: "Aspirin", category: "Cardiac", icon: Heart, available: true, eta: "12 min" },
@@ -68,47 +74,148 @@ const MedsByDrone = () => {
 
   const handleRequestMedicine = () => {
     if (medicineName.trim()) {
-      setDeliveryRequested(true);
+      setShowLocationStep(true);
     }
   };
 
   const handleRequestFirstAidKit = (kitId: string) => {
     setSelectedFirstAidKit(kitId);
-    setDeliveryRequested(true);
+    setShowLocationStep(true);
   };
+
+  const shareLocation = () => {
+    setIsLocating(true);
+    
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          const userLocation = { lat: latitude, lng: longitude };
+          setLocation(userLocation);
+          setIsLocating(false);
+          setDeliveryRequested(true);
+          
+          toast({
+            title: "Location shared",
+            description: "Your current location has been shared for drone delivery.",
+          });
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+          setIsLocating(false);
+          toast({
+            title: "Location access denied",
+            description: "Please enable location access for drone delivery.",
+            variant: "destructive",
+          });
+        }
+      );
+    } else {
+      setIsLocating(false);
+      toast({
+        title: "Location not supported",
+        description: "Your browser doesn't support location services.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (showLocationStep && !deliveryRequested) {
+    return (
+      <Card className="w-full border-primary">
+        <CardContent className="p-8 text-center">
+          <div className="space-y-6">
+            <div>
+              <MapPin className="h-16 w-16 text-primary mx-auto mb-4" />
+              <h3 className="text-2xl font-bold mb-2">Share Your Location</h3>
+              <p className="text-muted-foreground mb-4">
+                We need your current location to dispatch the drone with your {selectedFirstAidKit ? 'first aid kit' : 'medicine'}
+              </p>
+            </div>
+            
+            {location && (
+              <div className="bg-accent border border-border p-4 rounded-lg">
+                <h4 className="font-medium mb-2">Current Location</h4>
+                <div className="text-sm space-y-1">
+                  <p><strong>Latitude:</strong> {location.lat.toFixed(6)}</p>
+                  <p><strong>Longitude:</strong> {location.lng.toFixed(6)}</p>
+                </div>
+              </div>
+            )}
+            
+            <div className="flex justify-center gap-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowLocationStep(false)}
+              >
+                Back
+              </Button>
+              <Button 
+                onClick={shareLocation}
+                disabled={isLocating}
+                className="bg-primary hover:bg-primary/90"
+              >
+                {isLocating ? (
+                  <>
+                    <Navigation className="mr-2 h-4 w-4 animate-spin" />
+                    Getting Location...
+                  </>
+                ) : (
+                  <>
+                    <MapPin className="mr-2 h-4 w-4" />
+                    Share Location
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (deliveryRequested) {
     return (
-      <Card className="w-full border-healophile-blue-light">
+      <Card className="w-full border-primary">
         <CardContent className="p-8 text-center">
           <div className="space-y-6">
             <div className="animate-bounce">
-              <Plane className="h-16 w-16 text-healophile-blue mx-auto mb-4" />
+              <Plane className="h-16 w-16 text-primary mx-auto mb-4" />
             </div>
             
             <div>
-              <h3 className="text-2xl font-bold text-green-600 mb-2">Drone Dispatched!</h3>
+              <h3 className="text-2xl font-bold text-emerald-600 mb-2">Drone Dispatched!</h3>
               <p className="text-muted-foreground mb-4">
                 Your emergency medicine/supplies are on the way
               </p>
             </div>
+
+            {location && (
+              <div className="bg-accent border border-border p-4 rounded-lg mb-4">
+                <h4 className="font-medium mb-2">Delivery Location</h4>
+                <div className="text-sm space-y-1">
+                  <p><strong>Latitude:</strong> {location.lat.toFixed(6)}</p>
+                  <p><strong>Longitude:</strong> {location.lng.toFixed(6)}</p>
+                </div>
+              </div>
+            )}
             
-            <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
+            <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-lg">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="font-medium text-green-800">Estimated Arrival</p>
-                  <p className="text-green-700">8-15 minutes</p>
+                  <p className="font-medium text-emerald-800">Estimated Arrival</p>
+                  <p className="text-emerald-700">8-15 minutes</p>
                 </div>
                 <div>
-                  <p className="font-medium text-green-800">Tracking ID</p>
-                  <p className="text-green-700">DR{Date.now().toString().slice(-6)}</p>
+                  <p className="font-medium text-emerald-800">Tracking ID</p>
+                  <p className="text-emerald-700">DR{Date.now().toString().slice(-6)}</p>
                 </div>
               </div>
             </div>
             
-            <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg text-left">
-              <h4 className="font-medium text-blue-800 mb-2">Delivery Instructions</h4>
-              <ul className="text-sm text-blue-700 space-y-1">
+            <div className="bg-accent border border-border p-4 rounded-lg text-left">
+              <h4 className="font-medium mb-2">Delivery Instructions</h4>
+              <ul className="text-sm text-muted-foreground space-y-1">
                 <li>• Drone will hover at a safe altitude</li>
                 <li>• Medicine will be lowered in a secured container</li>
                 <li>• Please remain in your current location</li>
@@ -119,11 +226,15 @@ const MedsByDrone = () => {
             <div className="flex justify-center gap-4">
               <Button 
                 variant="outline" 
-                onClick={() => setDeliveryRequested(false)}
+                onClick={() => {
+                  setDeliveryRequested(false);
+                  setShowLocationStep(false);
+                  setLocation(null);
+                }}
               >
                 Request Another Item
               </Button>
-              <Button className="bg-red-600 hover:bg-red-700">
+              <Button className="bg-destructive hover:bg-destructive/90">
                 Call Emergency Services
               </Button>
             </div>
@@ -134,10 +245,10 @@ const MedsByDrone = () => {
   }
 
   return (
-    <Card className="w-full border-healophile-blue-light">
+    <Card className="w-full border-border bg-card">
       <CardHeader>
         <CardTitle className="font-display text-center flex items-center justify-center gap-2">
-          <Plane className="h-6 w-6 text-healophile-blue" />
+          <Plane className="h-6 w-6 text-primary" />
           Meds By Drone
         </CardTitle>
         <p className="text-center text-muted-foreground">
@@ -167,7 +278,7 @@ const MedsByDrone = () => {
                   <Button 
                     onClick={handleRequestMedicine}
                     disabled={!medicineName.trim()}
-                    className="bg-healophile-blue hover:bg-healophile-blue-dark"
+                    className="bg-primary hover:bg-primary/90"
                   >
                     Request
                   </Button>
@@ -197,14 +308,14 @@ const MedsByDrone = () => {
                       key={index}
                       className={`p-3 border rounded-lg cursor-pointer transition-colors ${
                         medicine.available 
-                          ? 'hover:bg-healophile-blue/5 border-healophile-blue/20' 
-                          : 'opacity-50 cursor-not-allowed border-gray-200'
+                          ? 'hover:bg-accent border-border' 
+                          : 'opacity-50 cursor-not-allowed border-muted'
                       }`}
                       onClick={() => medicine.available && setMedicineName(medicine.name)}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <IconComponent className="h-4 w-4 text-healophile-blue" />
+                          <IconComponent className="h-4 w-4 text-primary" />
                           <div>
                             <p className="font-medium text-sm">{medicine.name}</p>
                             <p className="text-xs text-muted-foreground">{medicine.category}</p>
@@ -233,13 +344,13 @@ const MedsByDrone = () => {
                 {firstAidKits.map((kit) => (
                   <Card 
                     key={kit.id}
-                    className="cursor-pointer transition-all hover:shadow-md border-healophile-blue/20 hover:border-healophile-blue"
+                    className="cursor-pointer transition-all hover:shadow-md border-border hover:border-primary"
                     onClick={() => handleRequestFirstAidKit(kit.id)}
                   >
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-2">
-                          <Package className="h-5 w-5 text-healophile-purple" />
+                          <Package className="h-5 w-5 text-secondary" />
                           <h4 className="font-medium">{kit.name}</h4>
                         </div>
                         <Badge className="text-xs">{kit.eta}</Badge>
@@ -262,7 +373,7 @@ const MedsByDrone = () => {
                       </div>
                       
                       <Button 
-                        className="w-full mt-3 bg-healophile-purple hover:bg-healophile-purple-dark"
+                        className="w-full mt-3 bg-secondary hover:bg-secondary/90"
                         size="sm"
                       >
                         Request This Kit
@@ -275,12 +386,12 @@ const MedsByDrone = () => {
           </TabsContent>
         </Tabs>
         
-        <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
-          <h4 className="font-medium text-yellow-800 mb-2 flex items-center gap-2">
+        <div className="bg-accent border border-border p-4 rounded-lg">
+          <h4 className="font-medium mb-2 flex items-center gap-2">
             <Shield className="h-4 w-4" />
             Important Safety Information
           </h4>
-          <ul className="text-sm text-yellow-700 space-y-1">
+          <ul className="text-sm text-muted-foreground space-y-1">
             <li>• Drone delivery available within 20km radius</li>
             <li>• Emergency services will be automatically notified</li>
             <li>• Only licensed medications will be delivered</li>

@@ -146,15 +146,32 @@ const AuthForm = ({ type }: AuthFormProps) => {
     try {
       if (type === "login") {
         const { error } = await signIn(formData.email, formData.password);
-        toast({
-          title: "Login successful",
-          description: `Welcome back${formData.role === "doctor" ? ", Dr." : ""}!`,
-        });
         
-        if (formData.role === "doctor") {
-          navigate("/doctor-dashboard");
-        } else {
-          navigate("/");
+        if (error) {
+          throw error;
+        }
+        
+        // Fetch the actual user role from database after login
+        const { data: session } = await supabase.auth.getSession();
+        if (session?.session?.user) {
+          const { data: roleData } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', session.session.user.id)
+            .maybeSingle();
+          
+          const actualRole = roleData?.role || 'patient';
+          
+          toast({
+            title: "Login successful",
+            description: `Welcome back${actualRole === "doctor" ? ", Doc" : ""}!`,
+          });
+          
+          if (actualRole === "doctor") {
+            navigate("/doctor-dashboard");
+          } else {
+            navigate("/");
+          }
         }
       } else {
         // For signup, store the email in our "database" (localStorage for demo)

@@ -5,8 +5,10 @@ import EmergencyServices from "@/components/EmergencyServices";
 import HospitalBedAvailability from "@/components/HospitalBedAvailability";
 import MedsByDrone from "@/components/MedsByDrone";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Emergency = () => {
+  const { userRole } = useAuth();
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -32,7 +34,7 @@ const Emergency = () => {
               <HospitalBedAvailability />
             </TabsContent>
             <TabsContent value="drone">
-              <MedsByDrone />
+              <MedsByDrone userRole={userRole || null} />
             </TabsContent>
           </Tabs>
         </div>

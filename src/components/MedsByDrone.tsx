@@ -1,407 +1,335 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Plane, 
   Package, 
   MapPin, 
   Clock, 
   CheckCircle,
-  Heart,
-  Pill,
-  Bandage,
-  Activity,
-  Stethoscope,
-  Shield,
-  Navigation
+  AlertCircle
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-const MedsByDrone = () => {
+interface MedsByDroneProps {
+  userRole: 'patient' | 'doctor' | null;
+}
+
+interface EmergencyRequest {
+  id: string;
+  patient_name: string;
+  patient_id: string;
+  request_type: string;
+  details: string;
+  status: string;
+  latitude: number | null;
+  longitude: number | null;
+  created_at: string;
+}
+
+const MedsByDrone = ({ userRole }: MedsByDroneProps) => {
   const { toast } = useToast();
-  const [medicineName, setMedicineName] = useState("");
-  const [urgency, setUrgency] = useState("");
-  const [deliveryRequested, setDeliveryRequested] = useState(false);
-  const [selectedFirstAidKit, setSelectedFirstAidKit] = useState("");
-  const [isLocating, setIsLocating] = useState(false);
-  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [showLocationStep, setShowLocationStep] = useState(false);
+  const { user } = useAuth();
+  const [details, setDetails] = useState("");
+  const [requestType, setRequestType] = useState<string>("");
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [emergencyRequests, setEmergencyRequests] = useState<EmergencyRequest[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const emergencyMedicines = [
-    { name: "Aspirin", category: "Cardiac", icon: Heart, available: true, eta: "12 min" },
-    { name: "Epinephrine", category: "Allergy", icon: Shield, available: true, eta: "8 min" },
-    { name: "Inhaler (Albuterol)", category: "Respiratory", icon: Activity, available: true, eta: "10 min" },
-    { name: "Insulin", category: "Diabetes", icon: Pill, available: true, eta: "15 min" },
-    { name: "Nitroglycerin", category: "Cardiac", icon: Heart, available: false, eta: "N/A" },
-    { name: "Glucose Tablets", category: "Diabetes", icon: Pill, available: true, eta: "7 min" }
-  ];
-
-  const firstAidKits = [
-    {
-      id: "basic",
-      name: "Basic First Aid Kit",
-      contents: ["Bandages", "Antiseptic Wipes", "Pain Relief Gel", "Thermometer"],
-      eta: "8 minutes",
-      weight: "0.5 kg"
-    },
-    {
-      id: "advanced",
-      name: "Advanced Emergency Kit",
-      contents: ["Blood Pressure Monitor", "Pulse Oximeter", "Emergency Medications", "Sterile Gauze"],
-      eta: "12 minutes", 
-      weight: "1.2 kg"
-    },
-    {
-      id: "cardiac",
-      name: "Cardiac Emergency Kit",
-      contents: ["AED Pads", "Aspirin", "Nitroglycerin", "Emergency Instructions"],
-      eta: "10 minutes",
-      weight: "0.8 kg"
-    },
-    {
-      id: "trauma",
-      name: "Trauma Response Kit",
-      contents: ["Tourniquets", "Hemostatic Agents", "Emergency Splints", "Pressure Bandages"],
-      eta: "15 minutes",
-      weight: "1.5 kg"
+  // Fetch emergency requests for doctors
+  useEffect(() => {
+    if (userRole === 'doctor') {
+      fetchEmergencyRequests();
     }
-  ];
+  }, [userRole]);
 
-  const handleRequestMedicine = () => {
-    if (medicineName.trim()) {
-      setShowLocationStep(true);
-    }
-  };
+  const fetchEmergencyRequests = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('emergency_requests')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-  const handleRequestFirstAidKit = (kitId: string) => {
-    setSelectedFirstAidKit(kitId);
-    setShowLocationStep(true);
-  };
-
-  const shareLocation = () => {
-    setIsLocating(true);
-    
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          const userLocation = { lat: latitude, lng: longitude };
-          setLocation(userLocation);
-          setIsLocating(false);
-          setDeliveryRequested(true);
-          
-          toast({
-            title: "Location shared",
-            description: "Your current location has been shared for drone delivery.",
-          });
-        },
-        (error) => {
-          console.error("Error getting location:", error);
-          setIsLocating(false);
-          toast({
-            title: "Location access denied",
-            description: "Please enable location access for drone delivery.",
-            variant: "destructive",
-          });
-        }
-      );
-    } else {
-      setIsLocating(false);
+      if (error) throw error;
+      setEmergencyRequests(data || []);
+    } catch (error) {
+      console.error('Error fetching requests:', error);
       toast({
-        title: "Location not supported",
-        description: "Your browser doesn't support location services.",
+        title: "Error",
+        description: "Failed to fetch emergency requests",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePatientRequest = async () => {
+    if (!requestType || !details.trim()) {
+      toast({
+        title: "Missing information",
+        description: "Please select a request type and provide details",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Get user's location
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject);
+      });
+
+      const { latitude, longitude } = position.coords;
+
+      // Create emergency request
+      const { error } = await supabase
+        .from('emergency_requests')
+        .insert({
+          patient_id: user?.id,
+          patient_name: user?.user_metadata?.full_name || user?.email || 'Unknown',
+          request_type: requestType,
+          details: details,
+          latitude: latitude,
+          longitude: longitude,
+          status: 'pending'
+        });
+
+      if (error) throw error;
+
+      setShowSuccessDialog(true);
+      setDetails("");
+      setRequestType("");
+    } catch (error: any) {
+      console.error('Error creating request:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send emergency request",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleApproveRequest = async (requestId: string, type: string) => {
+    try {
+      const { error } = await supabase
+        .from('emergency_requests')
+        .update({ 
+          status: 'approved',
+          assigned_doctor_id: user?.id 
+        })
+        .eq('id', requestId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Request Approved",
+        description: `Drone dispatched with ${type}`,
+      });
+
+      fetchEmergencyRequests();
+    } catch (error) {
+      console.error('Error approving request:', error);
+      toast({
+        title: "Error",
+        description: "Failed to approve request",
         variant: "destructive",
       });
     }
   };
 
-  if (showLocationStep && !deliveryRequested) {
+  if (userRole === 'patient') {
     return (
-      <Card className="w-full border-primary">
-        <CardContent className="p-8 text-center">
-          <div className="space-y-6">
-            <div>
-              <MapPin className="h-16 w-16 text-primary mx-auto mb-4" />
-              <h3 className="text-2xl font-bold mb-2">Share Your Location</h3>
-              <p className="text-muted-foreground mb-4">
-                We need your current location to dispatch the drone with your {selectedFirstAidKit ? 'first aid kit' : 'medicine'}
-              </p>
-            </div>
-            
-            {location && (
-              <div className="bg-accent border border-border p-4 rounded-lg">
-                <h4 className="font-medium mb-2">Current Location</h4>
-                <div className="text-sm space-y-1">
-                  <p><strong>Latitude:</strong> {location.lat.toFixed(6)}</p>
-                  <p><strong>Longitude:</strong> {location.lng.toFixed(6)}</p>
+      <>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Plane className="h-6 w-6 text-primary" />
+              Request Emergency Delivery
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="request-type">What do you need?</Label>
+                <Select value={requestType} onValueChange={setRequestType}>
+                  <SelectTrigger id="request-type">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="medicine">Medicine</SelectItem>
+                    <SelectItem value="food">Food</SelectItem>
+                    <SelectItem value="first-aid">First Aid Kit</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="details">Details</Label>
+                <Textarea
+                  id="details"
+                  placeholder="Describe what you need and your current situation..."
+                  value={details}
+                  onChange={(e) => setDetails(e.target.value)}
+                  rows={4}
+                />
+              </div>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="flex gap-2">
+                  <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-yellow-800">
+                    <p className="font-medium mb-1">Location sharing required</p>
+                    <p>Your location will be shared with medical professionals to dispatch the drone.</p>
+                  </div>
                 </div>
               </div>
-            )}
-            
-            <div className="flex justify-center gap-4">
+
               <Button 
-                variant="outline" 
-                onClick={() => setShowLocationStep(false)}
+                onClick={handlePatientRequest}
+                disabled={isSubmitting || !requestType || !details.trim()}
+                className="w-full"
+                size="lg"
               >
-                Back
-              </Button>
-              <Button 
-                onClick={shareLocation}
-                disabled={isLocating}
-                className="bg-primary hover:bg-primary/90"
-              >
-                {isLocating ? (
+                {isSubmitting ? (
                   <>
-                    <Navigation className="mr-2 h-4 w-4 animate-spin" />
-                    Getting Location...
+                    <Clock className="mr-2 h-4 w-4 animate-spin" />
+                    Sending Request...
                   </>
                 ) : (
                   <>
-                    <MapPin className="mr-2 h-4 w-4" />
-                    Share Location
+                    <Plane className="mr-2 h-4 w-4" />
+                    Send Emergency Request
                   </>
                 )}
               </Button>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-green-600">
+                <CheckCircle className="h-6 w-6" />
+                Request Sent Successfully
+              </DialogTitle>
+              <DialogDescription className="space-y-3 pt-4">
+                <p>
+                  Your emergency request has been sent to our medical team. 
+                  A doctor will review your request and dispatch the drone shortly.
+                </p>
+                <p className="font-medium">
+                  Someone will contact you soon. Please stay at your current location.
+                </p>
+              </DialogDescription>
+            </DialogHeader>
+            <Button onClick={() => setShowSuccessDialog(false)} className="w-full">
+              Close
+            </Button>
+          </DialogContent>
+        </Dialog>
+      </>
     );
   }
 
-  if (deliveryRequested) {
+  if (userRole === 'doctor') {
     return (
-      <Card className="w-full border-primary">
-        <CardContent className="p-8 text-center">
-          <div className="space-y-6">
-            <div className="animate-bounce">
-              <Plane className="h-16 w-16 text-primary mx-auto mb-4" />
-            </div>
-            
-            <div>
-              <h3 className="text-2xl font-bold text-emerald-600 mb-2">Drone Dispatched!</h3>
-              <p className="text-muted-foreground mb-4">
-                Your emergency medicine/supplies are on the way
-              </p>
-            </div>
-
-            {location && (
-              <div className="bg-accent border border-border p-4 rounded-lg mb-4">
-                <h4 className="font-medium mb-2">Delivery Location</h4>
-                <div className="text-sm space-y-1">
-                  <p><strong>Latitude:</strong> {location.lat.toFixed(6)}</p>
-                  <p><strong>Longitude:</strong> {location.lng.toFixed(6)}</p>
-                </div>
-              </div>
-            )}
-            
-            <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-lg">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="font-medium text-emerald-800">Estimated Arrival</p>
-                  <p className="text-emerald-700">8-15 minutes</p>
-                </div>
-                <div>
-                  <p className="font-medium text-emerald-800">Tracking ID</p>
-                  <p className="text-emerald-700">DR{Date.now().toString().slice(-6)}</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-accent border border-border p-4 rounded-lg text-left">
-              <h4 className="font-medium mb-2">Delivery Instructions</h4>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Drone will hover at a safe altitude</li>
-                <li>• Medicine will be lowered in a secured container</li>
-                <li>• Please remain in your current location</li>
-                <li>• Emergency services have been notified</li>
-              </ul>
-            </div>
-            
-            <div className="flex justify-center gap-4">
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setDeliveryRequested(false);
-                  setShowLocationStep(false);
-                  setLocation(null);
-                }}
-              >
-                Request Another Item
-              </Button>
-              <Button className="bg-destructive hover:bg-destructive/90">
-                Call Emergency Services
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card className="w-full border-border bg-card">
-      <CardHeader>
-        <CardTitle className="font-display text-center flex items-center justify-center gap-2">
-          <Plane className="h-6 w-6 text-primary" />
-          Meds By Drone
-        </CardTitle>
-        <p className="text-center text-muted-foreground">
-          Emergency medicine and first aid supply delivery via drone technology
-        </p>
-      </CardHeader>
-      
-      <CardContent className="space-y-6">
-        <Tabs defaultValue="medicine" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="medicine">Emergency Medicine</TabsTrigger>
-            <TabsTrigger value="firstaid">First Aid Kit</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="medicine" className="mt-6 space-y-6">
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="medicine-name">Tell me the medicine name</Label>
-                <div className="flex gap-2 mt-1">
-                  <Input
-                    id="medicine-name"
-                    placeholder="Enter medicine name (e.g., Aspirin, Insulin)"
-                    value={medicineName}
-                    onChange={(e) => setMedicineName(e.target.value)}
-                    className="flex-1"
-                  />
-                  <Button 
-                    onClick={handleRequestMedicine}
-                    disabled={!medicineName.trim()}
-                    className="bg-primary hover:bg-primary/90"
-                  >
-                    Request
-                  </Button>
-                </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="urgency">Urgency Level (Optional)</Label>
-                <Textarea
-                  id="urgency"
-                  placeholder="Describe the urgency or medical condition requiring this medicine"
-                  value={urgency}
-                  onChange={(e) => setUrgency(e.target.value)}
-                  rows={2}
-                  className="mt-1"
-                />
-              </div>
-            </div>
-            
-            <div className="border-t pt-6">
-              <h3 className="font-medium mb-4">Common Emergency Medicines Available</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {emergencyMedicines.map((medicine, index) => {
-                  const IconComponent = medicine.icon;
-                  return (
-                    <div 
-                      key={index}
-                      className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                        medicine.available 
-                          ? 'hover:bg-accent border-border' 
-                          : 'opacity-50 cursor-not-allowed border-muted'
-                      }`}
-                      onClick={() => medicine.available && setMedicineName(medicine.name)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <IconComponent className="h-4 w-4 text-primary" />
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Package className="h-6 w-6 text-primary" />
+              Emergency Requests
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <p className="text-center text-muted-foreground py-8">Loading requests...</p>
+            ) : emergencyRequests.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">No emergency requests at this time</p>
+            ) : (
+              <div className="space-y-4">
+                {emergencyRequests.map((request) => (
+                  <Card key={request.id} className="border-2">
+                    <CardContent className="pt-6">
+                      <div className="space-y-4">
+                        <div className="flex items-start justify-between">
                           <div>
-                            <p className="font-medium text-sm">{medicine.name}</p>
-                            <p className="text-xs text-muted-foreground">{medicine.category}</p>
+                            <h3 className="font-semibold text-lg">{request.patient_name}</h3>
+                            <Badge variant={request.status === 'pending' ? 'default' : 'secondary'}>
+                              {request.status}
+                            </Badge>
+                          </div>
+                          <div className="text-right text-sm text-muted-foreground">
+                            {new Date(request.created_at).toLocaleString()}
                           </div>
                         </div>
-                        <div className="text-right">
-                          <Badge 
-                            variant={medicine.available ? "default" : "secondary"}
-                            className="text-xs"
-                          >
-                            {medicine.available ? medicine.eta : "Unavailable"}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="firstaid" className="mt-6 space-y-6">
-            <div>
-              <h3 className="font-medium mb-4">First Aid Kit Options</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {firstAidKits.map((kit) => (
-                  <Card 
-                    key={kit.id}
-                    className="cursor-pointer transition-all hover:shadow-md border-border hover:border-primary"
-                    onClick={() => handleRequestFirstAidKit(kit.id)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <Package className="h-5 w-5 text-secondary" />
-                          <h4 className="font-medium">{kit.name}</h4>
-                        </div>
-                        <Badge className="text-xs">{kit.eta}</Badge>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="text-sm text-muted-foreground">
-                          <strong>Weight:</strong> {kit.weight}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium mb-1">Contents:</p>
-                          <div className="flex flex-wrap gap-1">
-                            {kit.contents.map((item, index) => (
-                              <Badge key={index} variant="outline" className="text-xs">
-                                {item}
-                              </Badge>
-                            ))}
+
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Package className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium capitalize">{request.request_type}</span>
                           </div>
+                          <p className="text-sm text-muted-foreground">{request.details}</p>
                         </div>
+
+                        {request.latitude && request.longitude && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <MapPin className="h-4 w-4 text-red-500" />
+                            <span>Location: {request.latitude.toFixed(6)}, {request.longitude.toFixed(6)}</span>
+                          </div>
+                        )}
+
+                        {request.status === 'pending' && (
+                          <div className="flex gap-2 pt-2">
+                            <Button
+                              onClick={() => handleApproveRequest(request.id, request.request_type)}
+                              className="flex-1"
+                            >
+                              <CheckCircle className="mr-2 h-4 w-4" />
+                              Approve & Dispatch Drone
+                            </Button>
+                          </div>
+                        )}
                       </div>
-                      
-                      <Button 
-                        className="w-full mt-3 bg-secondary hover:bg-secondary/90"
-                        size="sm"
-                      >
-                        Request This Kit
-                      </Button>
                     </CardContent>
                   </Card>
                 ))}
               </div>
-            </div>
-          </TabsContent>
-        </Tabs>
-        
-        <div className="bg-accent border border-border p-4 rounded-lg">
-          <h4 className="font-medium mb-2 flex items-center gap-2">
-            <Shield className="h-4 w-4" />
-            Important Safety Information
-          </h4>
-          <ul className="text-sm text-muted-foreground space-y-1">
-            <li>• Drone delivery available within 20km radius</li>
-            <li>• Emergency services will be automatically notified</li>
-            <li>• Only licensed medications will be delivered</li>
-            <li>• Please ensure safe landing area is available</li>
-            <li>• For life-threatening emergencies, call 911 immediately</li>
-          </ul>
-        </div>
-      </CardContent>
-    </Card>
-  );
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return null;
 };
 
 export default MedsByDrone;

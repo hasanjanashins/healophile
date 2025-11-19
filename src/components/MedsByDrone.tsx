@@ -51,6 +51,7 @@ const MedsByDrone = ({ userRole }: MedsByDroneProps) => {
   const { user } = useAuth();
   const [details, setDetails] = useState("");
   const [requestType, setRequestType] = useState<string>("");
+  const [subOption, setSubOption] = useState<string>("");
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [emergencyRequests, setEmergencyRequests] = useState<EmergencyRequest[]>([]);
@@ -132,6 +133,80 @@ const MedsByDrone = ({ userRole }: MedsByDroneProps) => {
       setShowSuccessDialog(true);
       setDetails("");
       setRequestType("");
+    } catch (error: any) {
+      console.error('Error creating request:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send emergency request",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDoctorRequest = async () => {
+    if (!requestType) {
+      toast({
+        title: "Missing information",
+        description: "Please select what you need",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if ((requestType === 'medicine' || requestType === 'first-aid') && !subOption) {
+      toast({
+        title: "Missing information",
+        description: `Please select a ${requestType === 'medicine' ? 'medicine type' : 'first aid kit type'}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!details.trim()) {
+      toast({
+        title: "Missing information",
+        description: "Please provide additional details",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Get doctor's location
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject);
+      });
+
+      const { latitude, longitude } = position.coords;
+
+      const requestDetails = subOption 
+        ? `${subOption} - ${details}` 
+        : details;
+
+      // Create emergency request
+      const { error } = await supabase
+        .from('emergency_requests')
+        .insert({
+          patient_id: user?.id,
+          patient_name: user?.user_metadata?.full_name || user?.email || 'Doctor',
+          request_type: requestType,
+          details: requestDetails,
+          latitude: latitude,
+          longitude: longitude,
+          status: 'approved', // Doctor requests are auto-approved
+          assigned_doctor_id: user?.id
+        });
+
+      if (error) throw error;
+
+      setShowSuccessDialog(true);
+      setDetails("");
+      setRequestType("");
+      setSubOption("");
     } catch (error: any) {
       console.error('Error creating request:', error);
       toast({
@@ -282,7 +357,10 @@ const MedsByDrone = ({ userRole }: MedsByDroneProps) => {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="doctor-request-type">What do you need?</Label>
-                <Select value={requestType} onValueChange={setRequestType}>
+                <Select value={requestType} onValueChange={(value) => {
+                  setRequestType(value);
+                  setSubOption(""); // Reset sub-option when changing type
+                }}>
                   <SelectTrigger id="doctor-request-type">
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
@@ -294,11 +372,50 @@ const MedsByDrone = ({ userRole }: MedsByDroneProps) => {
                 </Select>
               </div>
 
+              {requestType === 'medicine' && (
+                <div className="space-y-2">
+                  <Label htmlFor="medicine-type">Select Medicine</Label>
+                  <Select value={subOption} onValueChange={setSubOption}>
+                    <SelectTrigger id="medicine-type">
+                      <SelectValue placeholder="Select medicine" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pain-relief">Pain Relief (Ibuprofen, Paracetamol)</SelectItem>
+                      <SelectItem value="antibiotics">Antibiotics</SelectItem>
+                      <SelectItem value="cardiac">Cardiac Medications</SelectItem>
+                      <SelectItem value="insulin">Insulin</SelectItem>
+                      <SelectItem value="epinephrine">Epinephrine (EpiPen)</SelectItem>
+                      <SelectItem value="antihistamine">Antihistamines</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {requestType === 'first-aid' && (
+                <div className="space-y-2">
+                  <Label htmlFor="firstaid-type">Select First Aid Kit Type</Label>
+                  <Select value={subOption} onValueChange={setSubOption}>
+                    <SelectTrigger id="firstaid-type">
+                      <SelectValue placeholder="Select kit type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="basic">Basic First Aid Kit</SelectItem>
+                      <SelectItem value="cardiac">Cardiac Emergency Kit</SelectItem>
+                      <SelectItem value="trauma">Trauma Kit</SelectItem>
+                      <SelectItem value="burn">Burn Treatment Kit</SelectItem>
+                      <SelectItem value="pediatric">Pediatric Kit</SelectItem>
+                      <SelectItem value="advanced">Advanced Life Support Kit</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               <div className="space-y-2">
-                <Label htmlFor="doctor-details">Details</Label>
+                <Label htmlFor="doctor-details">Additional Details</Label>
                 <Textarea
                   id="doctor-details"
-                  placeholder="Describe what you need for your hospital/facility..."
+                  placeholder="Provide specific details (quantity, specific items needed, urgency level, etc.)..."
                   value={details}
                   onChange={(e) => setDetails(e.target.value)}
                   rows={4}
@@ -316,20 +433,21 @@ const MedsByDrone = ({ userRole }: MedsByDroneProps) => {
               </div>
 
               <Button 
-                onClick={handlePatientRequest}
-                disabled={isSubmitting || !requestType || !details.trim()}
+                onClick={handleDoctorRequest}
+                disabled={isSubmitting || !requestType || !details.trim() || 
+                  ((requestType === 'medicine' || requestType === 'first-aid') && !subOption)}
                 className="w-full"
                 size="lg"
               >
                 {isSubmitting ? (
                   <>
                     <Clock className="mr-2 h-4 w-4 animate-spin" />
-                    Sending Request...
+                    Dispatching Drone...
                   </>
                 ) : (
                   <>
                     <Plane className="mr-2 h-4 w-4" />
-                    Request Emergency Supplies
+                    Dispatch Drone Now
                   </>
                 )}
               </Button>
@@ -408,15 +526,17 @@ const MedsByDrone = ({ userRole }: MedsByDroneProps) => {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-green-600">
                 <CheckCircle className="h-6 w-6" />
-                Request Sent Successfully
+                Drone Dispatched Successfully
               </DialogTitle>
               <DialogDescription className="space-y-3 pt-4">
                 <p>
-                  Your emergency supply request has been sent. 
-                  The drone will be dispatched to your location shortly.
+                  The drone has been dispatched with your requested supplies{subOption ? ` (${subOption})` : ''}.
                 </p>
                 <p className="font-medium">
                   Estimated arrival: 15-20 minutes
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  You will receive a notification when the drone is nearby.
                 </p>
               </DialogDescription>
             </DialogHeader>

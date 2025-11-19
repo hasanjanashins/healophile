@@ -129,7 +129,7 @@ const upcomingAppointments = [
 ];
 
 const DoctorDashboard = () => {
-  const { currentUser } = useAuth();
+  const { user, userRole } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedPatient, setExpandedPatient] = useState(null);
   
@@ -149,7 +149,7 @@ const DoctorDashboard = () => {
           <div>
             <h1 className="text-3xl font-display font-bold text-healophile-purple">Doctor Dashboard</h1>
             <p className="text-muted-foreground">
-              Welcome back, {currentUser?.name || "Doctor"}! Here's your patient overview.
+              Welcome back, {user?.user_metadata?.full_name || "Doctor"}! Here's your patient overview.
             </p>
           </div>
           <div className="mt-4 md:mt-0 flex items-center space-x-2">

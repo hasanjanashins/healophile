@@ -9,7 +9,7 @@ import FileFilters from "@/components/FileFilters";
 import ShareFileDialog from "@/components/ShareFileDialog";
 
 const MedicalFileGallery = () => {
-  const { currentUser } = useAuth();
+  const { user, userRole } = useAuth();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
@@ -17,7 +17,7 @@ const MedicalFileGallery = () => {
   const [shareDoctor, setShareDoctor] = useState<string | null>(null);
   const [files, setFiles] = useState<FileItem[]>(getStoredFiles());
   
-  const isDoctor = currentUser?.role === "doctor";
+  const isDoctor = userRole === "doctor";
   
   // Verify blockchain integrity for all files on first load
   useEffect(() => {
@@ -37,11 +37,11 @@ const MedicalFileGallery = () => {
   // Filter files based on user role and ID
   const userFiles = files.filter(file => {
     // If doctor, only show files shared with them
-    if (isDoctor && currentUser?.id) {
-      return file.sharedWithIds.includes(currentUser.id);
+    if (isDoctor && user?.id) {
+      return file.sharedWithIds.includes(user.id);
     }
     // If patient, show all their files
-    return file.patientId === currentUser?.id;
+    return file.patientId === user?.id;
   });
   
   const filteredFiles = userFiles.filter((file) => {

@@ -57,51 +57,10 @@ const AuthForm = ({ type }: AuthFormProps) => {
     });
   };
 
-  // Advanced email validation with specific focus on Gmail validation
+  // Basic email validation
   const validateEmail = (email: string): boolean => {
-    // Basic email format validation
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    
-    if (!emailRegex.test(email)) {
-      return false;
-    }
-    
-    // For login, we should check if it's a Gmail account specifically
-    const isGmail = email.toLowerCase().endsWith('@gmail.com');
-    
-    // For demo purposes, also allow our test accounts
-    const isTestAccount = email === 'patient@healophile.com' || email === 'doctor@healophile.com';
-    
-    return isGmail || isTestAccount;
-  };
-  
-  // New function to check if email exists in our system
-  const checkEmailExists = async (email: string): Promise<boolean> => {
-    // If it's a test account, consider it exists
-    if (email === 'patient@healophile.com' || email === 'doctor@healophile.com') {
-      return true;
-    }
-    
-    try {
-      // For signup, we want to check if the email doesn't exist
-      if (type === "signup") {
-        // In a real app, you would check against your user database
-        // For demo, we'll simulate with localStorage
-        const existingUsers = localStorage.getItem('healophileUsers') || '[]';
-        const users = JSON.parse(existingUsers);
-        return !users.includes(email);
-      } 
-      // For login, we want to check if the email exists
-      else {
-        // For demo, we'll check against localStorage
-        const existingUsers = localStorage.getItem('healophileUsers') || '[]';
-        const users = JSON.parse(existingUsers);
-        return users.includes(email);
-      }
-    } catch (error) {
-      console.error("Error checking email:", error);
-      return false;
-    }
+    return emailRegex.test(email);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -110,35 +69,20 @@ const AuthForm = ({ type }: AuthFormProps) => {
     setErrors({});
     setLoading(true);
     
-    // Step 1: Validate email format
+    // Validate email format
     if (!validateEmail(formData.email)) {
-      setErrors({ ...errors, email: "Please enter a valid Gmail address" });
+      setErrors({ email: "Please enter a valid email address" });
       setLoading(false);
       toast({
         title: "Invalid email",
-        description: "Please enter a valid Gmail address",
+        description: "Please enter a valid email address",
         variant: "destructive"
       });
       return;
     }
     
-    // Step 2: For login, validate if email exists in our system
-    if (type === "login") {
-      const emailExists = await checkEmailExists(formData.email);
-      if (!emailExists) {
-        setErrors({ ...errors, email: "This email is not registered. Please sign up first." });
-        setLoading(false);
-        toast({
-          title: "Email not registered",
-          description: "This email is not registered. Please sign up first.",
-          variant: "destructive"
-        });
-        return;
-      }
-    }
-    
     if (formData.password.length < 6) {
-      setErrors({ ...errors, password: "Password must be at least 6 characters" });
+      setErrors({ password: "Password must be at least 6 characters" });
       setLoading(false);
       return;
     }
@@ -148,7 +92,18 @@ const AuthForm = ({ type }: AuthFormProps) => {
         const { error } = await signIn(formData.email, formData.password);
         
         if (error) {
-          throw error;
+          if (error.message.includes("Invalid login credentials")) {
+            setErrors({ general: "Invalid email or password" });
+            toast({
+              title: "Login failed",
+              description: "Invalid email or password. Please try again.",
+              variant: "destructive"
+            });
+          } else {
+            throw error;
+          }
+          setLoading(false);
+          return;
         }
         
         // Fetch the actual user role from database after login
@@ -167,39 +122,53 @@ const AuthForm = ({ type }: AuthFormProps) => {
             description: `Welcome back${actualRole === "doctor" ? ", Doc" : ""}!`,
           });
           
-          if (actualRole === "doctor") {
-            navigate("/doctor-dashboard");
-          } else {
-            navigate("/");
-          }
+          // Small delay to ensure role is set in context
+          setTimeout(() => {
+            if (actualRole === "doctor") {
+              navigate("/doctor-dashboard");
+            } else {
+              navigate("/");
+            }
+          }, 100);
         }
       } else {
-        // For signup, store the email in our "database" (localStorage for demo)
-        const existingUsers = localStorage.getItem('healophileUsers') || '[]';
-        const users = JSON.parse(existingUsers);
-        if (!users.includes(formData.email)) {
-          users.push(formData.email);
-          localStorage.setItem('healophileUsers', JSON.stringify(users));
-        }
-        
         // Generate blockchain hash for user security
         const userHash = generateBlockchainHash(formData.email, formData.role);
         console.log("User registered with blockchain hash:", userHash);
         
         const { error } = await signUp(formData.email, formData.password, formData.name, formData.role);
+        
+        if (error) {
+          if (error.message.includes("User already registered")) {
+            setErrors({ email: "This email is already registered. Please login instead." });
+            toast({
+              title: "Email already exists",
+              description: "This email is already registered. Please login instead.",
+              variant: "destructive"
+            });
+          } else {
+            throw error;
+          }
+          setLoading(false);
+          return;
+        }
+        
         toast({
           title: "Account created",
           description: "Your account has been created successfully with blockchain security!",
         });
-        navigate("/");
+        
+        // Navigate to login after successful signup
+        navigate("/login");
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Auth error:", error);
       toast({
         title: "Authentication error",
-        description: "There was a problem authenticating you.",
+        description: error.message || "There was a problem authenticating you.",
         variant: "destructive"
       });
-      setErrors({ ...errors, general: "Authentication failed. Please check your credentials." });
+      setErrors({ general: error.message || "Authentication failed. Please check your credentials." });
     } finally {
       setLoading(false);
     }

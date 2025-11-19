@@ -56,6 +56,9 @@ const MedsByDrone = ({ userRole }: MedsByDroneProps) => {
   const [emergencyRequests, setEmergencyRequests] = useState<EmergencyRequest[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Debug log
+  console.log('MedsByDrone userRole:', userRole);
+
   // Fetch emergency requests for doctors
   useEffect(() => {
     if (userRole === 'doctor') {
@@ -65,13 +68,19 @@ const MedsByDrone = ({ userRole }: MedsByDroneProps) => {
 
   const fetchEmergencyRequests = async () => {
     setIsLoading(true);
+    console.log('Fetching emergency requests for doctor...'); // Debug log
     try {
       const { data, error } = await supabase
         .from('emergency_requests')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching emergency requests:', error);
+        throw error;
+      }
+      
+      console.log('Fetched requests:', data); // Debug log
       setEmergencyRequests(data || []);
     } catch (error) {
       console.error('Error fetching requests:', error);

@@ -63,7 +63,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
 
-      setUserRole(data?.role || 'patient');
+      const role = data?.role || 'patient';
+      console.log('Fetched user role:', role); // Debug log
+      setUserRole(role);
     } catch (error) {
       console.error('Error fetching user role:', error);
     }
@@ -79,15 +81,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         emailRedirectTo: redirectUrl,
         data: {
           full_name: fullName,
+          role: role // Pass role in metadata
         }
       }
     });
 
     if (!error && data.user) {
-      await supabase
-        .from('user_roles')
-        .update({ role })
-        .eq('user_id', data.user.id);
+      // Wait a bit for the trigger to create the default role entry
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Update the role if it's different from default 'patient'
+      if (role === 'doctor') {
+        await supabase
+          .from('user_roles')
+          .update({ role: 'doctor' })
+          .eq('user_id', data.user.id);
+      }
       
       toast.success('Account created successfully!');
     }

@@ -143,12 +143,6 @@ const Navbar = () => {
                     Assistant
                   </Link>
                 </Button>
-                <Button asChild variant="ghost" className="text-gray-600 hover:text-healophile-purple">
-                  <Link to="/emergency">
-                    <Phone className="mr-1 h-4 w-4" />
-                    Emergency
-                  </Link>
-                </Button>
                 <Button asChild variant="outline" className="rounded-full border-healophile-purple text-healophile-purple hover:bg-healophile-purple-light">
                   <Link to="/login">Login</Link>
                 </Button>
@@ -220,12 +214,15 @@ const Navbar = () => {
                 Assistant
               </Link>
             </Button>
-            <Button asChild variant="ghost" className="w-full justify-start">
-              <Link to="/emergency" onClick={() => setIsMenuOpen(false)}>
-                <Phone className="mr-2 h-4 w-4" />
-                Emergency
-              </Link>
-            </Button>
+            
+            {user && (
+              <Button asChild variant="ghost" className="w-full justify-start">
+                <Link to="/emergency" onClick={() => setIsMenuOpen(false)}>
+                  <Phone className="mr-2 h-4 w-4" />
+                  Emergency
+                </Link>
+              </Button>
+            )}
             
             {!user ? (
               <div className="pt-2 flex flex-col space-y-2">

@@ -19,7 +19,7 @@ interface AuthFormProps {
 const AuthForm = ({ type }: AuthFormProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { login, signup } = useAuth();
+  const { signIn, signUp } = useAuth();
   
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -145,7 +145,7 @@ const AuthForm = ({ type }: AuthFormProps) => {
     
     try {
       if (type === "login") {
-        login(formData.email, formData.password, formData.role);
+        const { error } = await signIn(formData.email, formData.password);
         toast({
           title: "Login successful",
           description: `Welcome back${formData.role === "doctor" ? ", Dr." : ""}!`,
@@ -169,7 +169,7 @@ const AuthForm = ({ type }: AuthFormProps) => {
         const userHash = generateBlockchainHash(formData.email, formData.role);
         console.log("User registered with blockchain hash:", userHash);
         
-        signup(formData.name, formData.email, formData.password, formData.role);
+        const { error } = await signUp(formData.email, formData.password, formData.name, formData.role);
         toast({
           title: "Account created",
           description: "Your account has been created successfully with blockchain security!",

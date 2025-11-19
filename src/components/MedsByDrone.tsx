@@ -270,18 +270,86 @@ const MedsByDrone = ({ userRole }: MedsByDroneProps) => {
   if (userRole === 'doctor') {
     return (
       <div className="space-y-6">
+        {/* Doctor's own emergency request form */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Plane className="h-6 w-6 text-primary" />
+              Request Emergency Supplies
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="doctor-request-type">What do you need?</Label>
+                <Select value={requestType} onValueChange={setRequestType}>
+                  <SelectTrigger id="doctor-request-type">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="medicine">Medicine</SelectItem>
+                    <SelectItem value="food">Food</SelectItem>
+                    <SelectItem value="first-aid">First Aid Kit</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="doctor-details">Details</Label>
+                <Textarea
+                  id="doctor-details"
+                  placeholder="Describe what you need for your hospital/facility..."
+                  value={details}
+                  onChange={(e) => setDetails(e.target.value)}
+                  rows={4}
+                />
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex gap-2">
+                  <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-blue-800">
+                    <p className="font-medium mb-1">Hospital location required</p>
+                    <p>Your current location will be used for drone dispatch.</p>
+                  </div>
+                </div>
+              </div>
+
+              <Button 
+                onClick={handlePatientRequest}
+                disabled={isSubmitting || !requestType || !details.trim()}
+                className="w-full"
+                size="lg"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Clock className="mr-2 h-4 w-4 animate-spin" />
+                    Sending Request...
+                  </>
+                ) : (
+                  <>
+                    <Plane className="mr-2 h-4 w-4" />
+                    Request Emergency Supplies
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Patient requests to approve */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Package className="h-6 w-6 text-primary" />
-              Emergency Requests
+              Patient Emergency Requests
             </CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <p className="text-center text-muted-foreground py-8">Loading requests...</p>
             ) : emergencyRequests.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">No emergency requests at this time</p>
+              <p className="text-center text-muted-foreground py-8">No patient requests at this time</p>
             ) : (
               <div className="space-y-4">
                 {emergencyRequests.map((request) => (
@@ -334,6 +402,29 @@ const MedsByDrone = ({ userRole }: MedsByDroneProps) => {
             )}
           </CardContent>
         </Card>
+
+        <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-green-600">
+                <CheckCircle className="h-6 w-6" />
+                Request Sent Successfully
+              </DialogTitle>
+              <DialogDescription className="space-y-3 pt-4">
+                <p>
+                  Your emergency supply request has been sent. 
+                  The drone will be dispatched to your location shortly.
+                </p>
+                <p className="font-medium">
+                  Estimated arrival: 15-20 minutes
+                </p>
+              </DialogDescription>
+            </DialogHeader>
+            <Button onClick={() => setShowSuccessDialog(false)} className="w-full">
+              Close
+            </Button>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }

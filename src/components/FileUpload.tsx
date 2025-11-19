@@ -114,7 +114,7 @@ interface FileError {
 
 const FileUpload = () => {
   const { toast } = useToast();
-  const { currentUser } = useAuth();
+  const { user } = useAuth();
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [validating, setValidating] = useState(false);
@@ -235,7 +235,7 @@ const FileUpload = () => {
               : "https://placehold.co/400x500/e5deff/7E69AB?text=Doc";
             
             // Generate blockchain hash for this file
-            const blockchainHash = generateBlockchainHash(file, currentUser?.id || 'guest');
+            const blockchainHash = generateBlockchainHash(file, user?.id || 'guest');
             
             // Add the new file to storage
             const newFile = {
@@ -244,8 +244,8 @@ const FileUpload = () => {
               type: fileType,
               date: new Date().toISOString().split('T')[0],
               size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
-              patientId: currentUser?.id || 'guest',
-              patientName: currentUser?.name || 'Guest User',
+              patientId: user?.id || 'guest',
+              patientName: user?.user_metadata?.full_name || 'Guest User',
               thumbnail: thumbnail,
               sharedWith: selectedDoctorsList.map(doc => doc.name),
               sharedWithIds: selectedDoctorsList.map(doc => doc.id),

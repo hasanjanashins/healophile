@@ -17,7 +17,7 @@ import {
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const { currentUser, logout } = useAuth();
+  const { user, userRole, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const toggleMenu = () => {
@@ -25,7 +25,7 @@ const Navbar = () => {
   };
   
   const handleLogout = () => {
-    logout();
+    signOut();
     navigate("/login");
   };
   
@@ -34,7 +34,8 @@ const Navbar = () => {
     return name.split(" ").map(n => n[0]).join("").toUpperCase();
   };
   
-  const isDoctorUser = currentUser?.role === "doctor";
+  const userName = user?.user_metadata?.full_name || user?.email || "User";
+  const isDoctorUser = userRole === "doctor";
 
   return (
     <nav className="bg-white shadow-sm sticky top-0 z-50">
@@ -50,7 +51,7 @@ const Navbar = () => {
           </div>
           
           <div className="hidden md:flex items-center space-x-4">
-            {currentUser && (
+            {user && (
               <>
                 {!isDoctorUser && (
                   <>
@@ -94,7 +95,7 @@ const Navbar = () => {
                     <Button variant="ghost" size="icon" className="rounded-full border border-muted hover:bg-transparent">
                       <Avatar className="h-8 w-8">
                         <AvatarFallback className="bg-healophile-purple text-white">
-                          {getInitials(currentUser.name)}
+                          {getInitials(userName)}
                         </AvatarFallback>
                       </Avatar>
                     </Button>
@@ -102,8 +103,8 @@ const Navbar = () => {
                   <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuLabel>
                       <div className="flex flex-col">
-                        <span>{currentUser.name}</span>
-                        <span className="text-xs text-muted-foreground">{currentUser.email}</span>
+                        <span>{userName}</span>
+                        <span className="text-xs text-muted-foreground">{user?.email}</span>
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
@@ -134,7 +135,7 @@ const Navbar = () => {
               </>
             )}
             
-            {!currentUser && (
+            {!user && (
               <>
                 <Button asChild variant="ghost" className="text-gray-600 hover:text-healophile-purple">
                   <Link to="/chat">
@@ -170,18 +171,18 @@ const Navbar = () => {
       {isMenuOpen && (
         <div className="md:hidden animate-slide-in">
           <div className="pt-2 pb-4 space-y-1 px-4">
-            {currentUser && (
+            {user && (
               <>
                 <div className="py-3 border-b mb-2">
                   <div className="flex items-center">
                     <Avatar className="h-10 w-10 mr-3">
                       <AvatarFallback className="bg-healophile-purple text-white">
-                        {getInitials(currentUser.name)}
+                        {getInitials(userName)}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="font-medium">{currentUser.name}</p>
-                      <p className="text-sm text-muted-foreground">{currentUser.email}</p>
+                      <p className="font-medium">{userName}</p>
+                      <p className="text-sm text-muted-foreground">{user?.email}</p>
                     </div>
                   </div>
                 </div>
@@ -226,7 +227,7 @@ const Navbar = () => {
               </Link>
             </Button>
             
-            {!currentUser ? (
+            {!user ? (
               <div className="pt-2 flex flex-col space-y-2">
                 <Button asChild variant="outline" className="w-full">
                   <Link to="/login" onClick={() => setIsMenuOpen(false)}>Login</Link>

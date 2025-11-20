@@ -87,17 +87,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     if (!error && data.user) {
-      // Wait a bit for the trigger to create the default role entry
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Update the role if it's different from default 'patient'
-      if (role === 'doctor') {
-        await supabase
-          .from('user_roles')
-          .update({ role: 'doctor' })
-          .eq('user_id', data.user.id);
-      }
-      
+      // The database trigger will automatically assign the role from metadata
+      // No client-side role manipulation needed for security
       toast.success('Account created successfully!');
     }
 

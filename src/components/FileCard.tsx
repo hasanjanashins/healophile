@@ -1,11 +1,14 @@
 
 import React from "react";
-import { Share, Lock, FileText, Image, Calendar, Shield, Eye, Download, ShieldCheck, AlertTriangle } from "lucide-react";
+import { Share, Lock, FileText, Image, Calendar, Shield, Eye, Download, ShieldCheck, AlertTriangle, Sparkles, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { FileItem } from "@/types/file";
+import { supabase } from "@/integrations/supabase/client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useState } from "react";
 
 interface FileCardProps {
   file: FileItem;
@@ -16,12 +19,49 @@ interface FileCardProps {
 
 const FileCard = ({ file, isDoctor, onShare, onVerify }: FileCardProps) => {
   const { toast } = useToast();
+  const [summary, setSummary] = useState<string>('');
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   
   const handleDownload = () => {
     toast({
       title: "File download started",
       description: `${file.name} is being downloaded to your device.`
     });
+  };
+
+  const generateSummary = async () => {
+    setIsGeneratingSummary(true);
+    setSummary('');
+
+    try {
+      const fileContent = `Medical file: ${file.name}\nType: ${file.type}\nDate: ${file.uploadedAt || file.date}\nSize: ${file.size}\nPatient: ${file.patientName || 'Unknown'}`;
+
+      const { data, error } = await supabase.functions.invoke('summarize-medical-file', {
+        body: {
+          fileName: file.name,
+          fileType: file.type,
+          fileContent
+        }
+      });
+
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+
+      setSummary(data.summary);
+      toast({
+        title: "Summary generated",
+        description: "AI analysis complete"
+      });
+    } catch (error) {
+      console.error('Error generating summary:', error);
+      toast({
+        title: "Summary failed",
+        description: error instanceof Error ? error.message : "Failed to generate summary",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGeneratingSummary(false);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -118,6 +158,15 @@ const FileCard = ({ file, isDoctor, onShare, onVerify }: FileCardProps) => {
           </div>
         )}
         
+        {summary && (
+          <Alert className="mt-3 bg-muted/50">
+            <Sparkles className="h-4 w-4" />
+            <AlertDescription className="mt-2 text-xs whitespace-pre-wrap">
+              {summary}
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <div className="grid grid-cols-2 gap-2 mt-3">
           <Button size="sm" variant="outline" className="w-full" onClick={handleDownload}>
             <Eye className="h-4 w-4 mr-1" />
@@ -127,12 +176,31 @@ const FileCard = ({ file, isDoctor, onShare, onVerify }: FileCardProps) => {
             <Download className="h-4 w-4 mr-1" />
             Download
           </Button>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="w-full" 
+            onClick={generateSummary}
+            disabled={isGeneratingSummary}
+          >
+            {isGeneratingSummary ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                AI
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4 mr-1" />
+                AI Summary
+              </>
+            )}
+          </Button>
           <Button size="sm" variant="outline" className="w-full" onClick={onVerify}>
             <ShieldCheck className="h-4 w-4 mr-1" />
             Verify
           </Button>
           {!isDoctor && !file.isShared && (
-            <Button size="sm" className="w-full bg-healophile-purple" onClick={onShare}>
+            <Button size="sm" className="w-full bg-healophile-purple col-span-2" onClick={onShare}>
               <Share className="h-4 w-4 mr-1" />
               Share
             </Button>

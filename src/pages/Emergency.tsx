@@ -4,6 +4,7 @@ import Footer from "@/components/Footer";
 import EmergencyServices from "@/components/EmergencyServices";
 import HospitalBedAvailability from "@/components/HospitalBedAvailability";
 import MedsByDrone from "@/components/MedsByDrone";
+import SymptomAnalyzer from "@/components/SymptomAnalyzer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -24,13 +25,17 @@ const Emergency = () => {
         
         <div className="max-w-5xl mx-auto">
           <Tabs defaultValue="contacts" className="w-full">
-            <TabsList className="w-full grid grid-cols-3 mb-6">
+            <TabsList className="w-full grid grid-cols-4 mb-6">
               <TabsTrigger value="contacts">Emergency Contacts</TabsTrigger>
-              <TabsTrigger value="beds">Hospital Bed Availability</TabsTrigger>
+              <TabsTrigger value="analyzer">AI Symptom Analyzer</TabsTrigger>
+              <TabsTrigger value="beds">Hospital Beds</TabsTrigger>
               <TabsTrigger value="drone">Meds By Drone</TabsTrigger>
             </TabsList>
             <TabsContent value="contacts">
               <EmergencyServices />
+            </TabsContent>
+            <TabsContent value="analyzer">
+              <SymptomAnalyzer />
             </TabsContent>
             <TabsContent value="beds">
               <HospitalBedAvailability />

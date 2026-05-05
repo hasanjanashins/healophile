@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Eye, EyeOff, Lock, Mail, User, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface AuthFormProps {
   type: "login" | "signup";
@@ -27,6 +28,7 @@ const AuthForm = ({ type }: AuthFormProps) => {
     email: "",
     password: "",
   });
+  const [role, setRole] = useState<"patient" | "doctor">("patient");
   const [errors, setErrors] = useState<{
     email?: string;
     password?: string;
@@ -151,7 +153,7 @@ const AuthForm = ({ type }: AuthFormProps) => {
         }
       } else {
         // Generate blockchain hash for user security
-        const { error } = await signUp(formData.email, formData.password, formData.name, 'patient');
+        const { error } = await signUp(formData.email, formData.password, formData.name, role);
         
         if (error) {
           if (error.message.includes("User already registered")) {
@@ -309,6 +311,24 @@ const AuthForm = ({ type }: AuthFormProps) => {
             )}
           </div>
           
+          <div className="space-y-2">
+            <Label>I am a</Label>
+            <RadioGroup
+              value={role}
+              onValueChange={(val) => setRole(val as "patient" | "doctor")}
+              className="flex space-x-4"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="patient" id="role-patient" />
+                <Label htmlFor="role-patient" className="cursor-pointer">Patient</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="doctor" id="role-doctor" />
+                <Label htmlFor="role-doctor" className="cursor-pointer">Doctor</Label>
+              </div>
+            </RadioGroup>
+          </div>
+
           <Button
             type="submit"
             className="w-full bg-gradient-to-r from-healophile-blue to-healophile-purple hover:opacity-90"

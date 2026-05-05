@@ -95,10 +95,13 @@ const MEDICAL_KEYWORDS = [
   'doc', 'pdf', 'img', 'pic', 'photo', 'image', 'document',
 ];
 
-// Validate if file name suggests a medical document
+// Validate if file name or common image/report metadata suggests a medical document
 const validateMedicalFile = (file: File): { isValid: boolean; message: string } => {
-  // Always accept image files (scanned reports, photos of documents, X-rays, etc.)
-  if (file.type.startsWith('image/')) {
+  const extension = file.name.split('.').pop()?.toLowerCase() || '';
+  const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'tiff', 'tif', 'dicom', 'dcm', 'heic', 'heif'];
+
+  // Always accept image-like files because scanned reports/photos often have generic names or missing MIME types.
+  if (file.type.startsWith('image/') || imageExtensions.includes(extension)) {
     return { isValid: true, message: 'Image file accepted as potential medical document.' };
   }
   
@@ -111,7 +114,7 @@ const validateMedicalFile = (file: File): { isValid: boolean; message: string } 
   
   return {
     isValid: false,
-    message: 'This does not appear to be a medical file. Please rename the file to include relevant medical terms (e.g., "Blood Test Report.pdf").'
+    message: 'Not a medical file. Add a medical term in the filename like report, prescription, blood, scan, xray, lab, or hospital.'
   };
 };
 
@@ -131,9 +134,9 @@ const FileUpload = () => {
   const [selectedDoctors, setSelectedDoctors] = useState<Record<string, boolean>>({});
   const [fileErrors, setFileErrors] = useState<FileError[]>([]);
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files.length > 0) {
-      const newFiles = Array.from(event.target.files);
+  const processSelectedFiles = async (selectedFiles: FileList | File[]) => {
+    const newFiles = Array.from(selectedFiles);
+    if (newFiles.length > 0) {
       setValidating(true);
       
       const validFiles: File[] = [];
@@ -183,6 +186,20 @@ const FileUpload = () => {
           description: `${validFiles.length} medical file(s) successfully added`,
         });
       }
+    }
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      await processSelectedFiles(event.target.files);
+      event.target.value = '';
+    }
+  };
+
+  const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    if (!uploading && !validating && event.dataTransfer.files.length > 0) {
+      await processSelectedFiles(event.dataTransfer.files);
     }
   };
 

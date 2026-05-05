@@ -220,11 +220,59 @@ const FileUpload = () => {
     return Object.values(selectedDoctors).filter(selected => selected).length;
   };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (files.length === 0) return;
     
     setUploading(true);
     setProgress(0);
+    
+    // Read all files as data URLs first
+    const selectedDoctorsList = availableDoctors.filter(doctor => selectedDoctors[doctor.id]);
+    const storedFiles = getStoredFiles();
+    const newStoredFiles = [...storedFiles];
+    
+    const fileReadPromises = files.map((file, index) => {
+      return new Promise<void>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+          const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'tiff', 'dicom'].includes(fileExtension);
+          const fileType = isImage ? 'image' : 'document';
+          const thumbnail = isImage 
+            ? "https://placehold.co/400x400/d3e4fd/0EA5E9?text=Image" 
+            : "https://placehold.co/400x500/e5deff/7E69AB?text=Doc";
+          const blockchainHash = generateBlockchainHash(file, user?.id || 'guest');
+          
+          const newFile = {
+            id: `${Date.now()}-${index}`,
+            name: file.name,
+            type: fileType,
+            date: new Date().toISOString().split('T')[0],
+            size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+            patientId: user?.id || 'guest',
+            patientName: user?.user_metadata?.full_name || 'Guest User',
+            thumbnail: thumbnail,
+            sharedWith: selectedDoctorsList.map(doc => doc.name),
+            sharedWithIds: selectedDoctorsList.map(doc => doc.id),
+            isShared: selectedDoctorsList.length > 0,
+            blockchainHash: blockchainHash,
+            blockchainVerified: true,
+            uploadedAt: new Date().toISOString(),
+            dataUrl: reader.result as string
+          };
+          
+          newStoredFiles.push(newFile);
+          resolve();
+        };
+        reader.onerror = () => resolve();
+        reader.readAsDataURL(file);
+      });
+    });
+    
+    await Promise.all(fileReadPromises);
+    
+    const filesToSave = newStoredFiles;
+    const fileCount = files.length;
     
     // Simulate upload process
     const interval = setInterval(() => {
@@ -234,50 +282,8 @@ const FileUpload = () => {
           setUploading(false);
           setIsSuccess(true);
           
-          // Get selected doctors
-          const selectedDoctorsList = availableDoctors.filter(doctor => selectedDoctors[doctor.id]);
-          
-          // Create new files to add to storage
-          const storedFiles = getStoredFiles();
-          const newStoredFiles = [...storedFiles];
-          
-          files.forEach((file, index) => {
-            // Create file type (document or image) based on file extension
-            const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
-            const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'tiff', 'dicom'].includes(fileExtension);
-            const fileType = isImage ? 'image' : 'document';
-            
-            // Create thumbnail based on file type
-            const thumbnail = isImage 
-              ? "https://placehold.co/400x400/d3e4fd/0EA5E9?text=Image" 
-              : "https://placehold.co/400x500/e5deff/7E69AB?text=Doc";
-            
-            // Generate blockchain hash for this file
-            const blockchainHash = generateBlockchainHash(file, user?.id || 'guest');
-            
-            // Add the new file to storage
-            const newFile = {
-              id: `${Date.now()}-${index}`,
-              name: file.name,
-              type: fileType,
-              date: new Date().toISOString().split('T')[0],
-              size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
-              patientId: user?.id || 'guest',
-              patientName: user?.user_metadata?.full_name || 'Guest User',
-              thumbnail: thumbnail,
-              sharedWith: selectedDoctorsList.map(doc => doc.name),
-              sharedWithIds: selectedDoctorsList.map(doc => doc.id),
-              isShared: selectedDoctorsList.length > 0,
-              blockchainHash: blockchainHash,  // Add blockchain hash
-              blockchainVerified: true,       // Mark as verified in the blockchain
-              uploadedAt: new Date().toISOString()
-            };
-            
-            newStoredFiles.push(newFile);
-          });
-          
           // Save updated files to storage
-          saveFilesToStorage(newStoredFiles);
+          saveFilesToStorage(filesToSave);
           
           // Format sharing message
           const selectedDoctorCount = getSelectedDoctorsCount();
@@ -293,7 +299,7 @@ const FileUpload = () => {
           
           toast({
             title: "Files uploaded successfully",
-            description: `${files.length} file(s) have been securely uploaded to your medical records${sharingMessage}.`,
+            description: `${fileCount} file(s) have been securely uploaded to your medical records${sharingMessage}.`,
           });
           
           setFiles([]);

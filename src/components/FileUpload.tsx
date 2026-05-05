@@ -97,6 +97,11 @@ const MEDICAL_KEYWORDS = [
 
 // Validate if file name suggests a medical document
 const validateMedicalFile = (file: File): { isValid: boolean; message: string } => {
+  // Always accept image files (scanned reports, photos of documents, X-rays, etc.)
+  if (file.type.startsWith('image/')) {
+    return { isValid: true, message: 'Image file accepted as potential medical document.' };
+  }
+  
   const nameLower = file.name.toLowerCase().replace(/[_\-\.]/g, ' ');
   const isMedical = MEDICAL_KEYWORDS.some(keyword => nameLower.includes(keyword));
   

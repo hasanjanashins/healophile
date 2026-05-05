@@ -15,6 +15,7 @@ export interface FileItem {
   blockchainHash: string;
   blockchainVerified: boolean;
   uploadedAt?: string;
+  dataUrl?: string;
 }
 
 export interface Doctor {

@@ -92,21 +92,6 @@ const MedicalFileGallery = () => {
   };
 
   const handleVerifyBlockchain = async (fileId: string) => {
-    // Find the file
-@@
-  };
-
-  const handleRemoveFile = (fileId: string) => {
-    const updatedFiles = files.filter(f => f.id !== fileId);
-    setFiles(updatedFiles);
-    saveFilesToStorage(updatedFiles);
-    toast({
-      title: "File removed",
-      description: "The file has been removed from your records.",
-    });
-  };
-
-  return (
     const fileToVerify = files.find(f => f.id === fileId);
     if (!fileToVerify) return;
     
@@ -138,6 +123,16 @@ const MedicalFileGallery = () => {
         variant: isVerified ? "default" : "destructive"
       });
     }, 1500);
+  };
+
+  const handleRemoveFile = (fileId: string) => {
+    const updatedFiles = files.filter(f => f.id !== fileId);
+    setFiles(updatedFiles);
+    saveFilesToStorage(updatedFiles);
+    toast({
+      title: "File removed",
+      description: "The file has been removed from your records.",
+    });
   };
 
   return (

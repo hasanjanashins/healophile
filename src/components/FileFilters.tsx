@@ -15,6 +15,7 @@ interface FileFiltersProps {
   isDoctor: boolean;
   onShare: (fileId: string) => void;
   onVerify: (fileId: string) => void;
+  onRemove: (fileId: string) => void;
 }
 
 const FileFilters = ({
@@ -25,7 +26,8 @@ const FileFilters = ({
   filteredFiles,
   isDoctor,
   onShare,
-  onVerify
+  onVerify,
+  onRemove
 }: FileFiltersProps) => {
   return (
     <>
@@ -52,6 +54,7 @@ const FileFilters = ({
             isDoctor={isDoctor}
             onShare={onShare}
             onVerify={onVerify}
+            onRemove={onRemove}
           />
         </TabsContent>
         <TabsContent value="document" className="mt-0">
@@ -60,6 +63,7 @@ const FileFilters = ({
             isDoctor={isDoctor}
             onShare={onShare}
             onVerify={onVerify}
+            onRemove={onRemove}
           />
         </TabsContent>
         <TabsContent value="image" className="mt-0">
@@ -68,6 +72,7 @@ const FileFilters = ({
             isDoctor={isDoctor}
             onShare={onShare}
             onVerify={onVerify}
+            onRemove={onRemove}
           />
         </TabsContent>
         {!isDoctor && (
@@ -77,6 +82,7 @@ const FileFilters = ({
               isDoctor={isDoctor}
               onShare={onShare}
               onVerify={onVerify}
+              onRemove={onRemove}
             />
           </TabsContent>
         )}

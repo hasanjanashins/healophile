@@ -92,6 +92,10 @@ const MedicalFileGallery = () => {
   };
 
   const handleVerifyBlockchain = async (fileId: string) => {
+    // Find the file
+@@
+  };
+
   const handleRemoveFile = (fileId: string) => {
     const updatedFiles = files.filter(f => f.id !== fileId);
     setFiles(updatedFiles);
@@ -102,7 +106,7 @@ const MedicalFileGallery = () => {
     });
   };
 
-    // Find the file
+  return (
     const fileToVerify = files.find(f => f.id === fileId);
     if (!fileToVerify) return;
     

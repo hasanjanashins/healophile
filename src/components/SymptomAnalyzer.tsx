@@ -6,12 +6,15 @@ import { AlertCircle, Loader2, Sparkles } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import ReactMarkdown from 'react-markdown';
+import { useAuth } from '@/contexts/AuthContext';
 
 const SymptomAnalyzer = () => {
   const [symptoms, setSymptoms] = useState('');
   const [analysis, setAnalysis] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const analyzeSymptoms = async () => {
     if (!symptoms.trim()) {
@@ -27,12 +30,23 @@ const SymptomAnalyzer = () => {
     setAnalysis('');
 
     try {
+      if (!user) {
+        toast({
+          title: "Login required",
+          description: "Please log in to use the symptom analyzer",
+          variant: "destructive",
+        });
+        setIsAnalyzing(false);
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('symptom-analysis', {
         body: { symptoms }
       });
 
       if (error) {
-        throw error;
+        console.error('Function invoke error:', error);
+        throw new Error(error.message || 'Failed to analyze symptoms');
       }
 
       if (data.error) {
@@ -106,8 +120,8 @@ const SymptomAnalyzer = () => {
               <CardTitle className="text-lg">Analysis Result</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
-                {analysis}
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                <ReactMarkdown>{analysis}</ReactMarkdown>
               </div>
             </CardContent>
           </Card>

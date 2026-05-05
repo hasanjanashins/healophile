@@ -57,10 +57,26 @@ const AuthForm = ({ type }: AuthFormProps) => {
     });
   };
 
-  // Basic email validation
   const validateEmail = (email: string): boolean => {
+    if (email.length > 255) return false;
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     return emailRegex.test(email);
+  };
+
+  const validatePassword = (password: string): string | null => {
+    if (password.length < 8) return "Password must be at least 8 characters";
+    if (!/[A-Z]/.test(password)) return "Password must contain an uppercase letter";
+    if (!/[a-z]/.test(password)) return "Password must contain a lowercase letter";
+    if (!/[0-9]/.test(password)) return "Password must contain a number";
+    return null;
+  };
+
+  const validateName = (name: string): string | null => {
+    const trimmed = name.trim();
+    if (trimmed.length === 0) return "Name is required";
+    if (trimmed.length > 100) return "Name must be less than 100 characters";
+    if (/<[^>]*>/.test(trimmed)) return "Name contains invalid characters";
+    return null;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -81,8 +97,19 @@ const AuthForm = ({ type }: AuthFormProps) => {
       return;
     }
     
-    if (formData.password.length < 6) {
-      setErrors({ password: "Password must be at least 6 characters" });
+    // Validate name for signup
+    if (type === "signup") {
+      const nameError = validateName(formData.name);
+      if (nameError) {
+        setErrors({ general: nameError });
+        setLoading(false);
+        return;
+      }
+    }
+
+    const passwordError = validatePassword(formData.password);
+    if (passwordError) {
+      setErrors({ password: passwordError });
       setLoading(false);
       return;
     }
@@ -133,9 +160,6 @@ const AuthForm = ({ type }: AuthFormProps) => {
         }
       } else {
         // Generate blockchain hash for user security
-        const userHash = generateBlockchainHash(formData.email, formData.role);
-        console.log("User registered with blockchain hash:", userHash);
-        
         const { error } = await signUp(formData.email, formData.password, formData.name, formData.role);
         
         if (error) {
@@ -162,7 +186,6 @@ const AuthForm = ({ type }: AuthFormProps) => {
         navigate("/login");
       }
     } catch (error: any) {
-      console.error("Auth error:", error);
       toast({
         title: "Authentication error",
         description: error.message || "There was a problem authenticating you.",
@@ -225,6 +248,7 @@ const AuthForm = ({ type }: AuthFormProps) => {
                   value={formData.name}
                   onChange={handleChange}
                   required={type === "signup"}
+                  maxLength={100}
                 />
               </div>
             </div>
@@ -243,6 +267,7 @@ const AuthForm = ({ type }: AuthFormProps) => {
                 value={formData.email}
                 onChange={handleChange}
                 required
+                  maxLength={255}
               />
             </div>
             {errors.email && (

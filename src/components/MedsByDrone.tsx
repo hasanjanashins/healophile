@@ -57,9 +57,6 @@ const MedsByDrone = ({ userRole }: MedsByDroneProps) => {
   const [emergencyRequests, setEmergencyRequests] = useState<EmergencyRequest[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Debug log
-  console.log('MedsByDrone userRole:', userRole);
-
   // Fetch emergency requests for doctors
   useEffect(() => {
     if (userRole === 'doctor') {
@@ -69,7 +66,6 @@ const MedsByDrone = ({ userRole }: MedsByDroneProps) => {
 
   const fetchEmergencyRequests = async () => {
     setIsLoading(true);
-    console.log('Fetching emergency requests for doctor...'); // Debug log
     try {
       const { data, error } = await supabase
         .from('emergency_requests')
@@ -77,14 +73,11 @@ const MedsByDrone = ({ userRole }: MedsByDroneProps) => {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching emergency requests:', error);
         throw error;
       }
       
-      console.log('Fetched requests:', data); // Debug log
       setEmergencyRequests(data || []);
     } catch (error) {
-      console.error('Error fetching requests:', error);
       toast({
         title: "Error",
         description: "Failed to fetch emergency requests",
@@ -134,7 +127,6 @@ const MedsByDrone = ({ userRole }: MedsByDroneProps) => {
       setDetails("");
       setRequestType("");
     } catch (error: any) {
-      console.error('Error creating request:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to send emergency request",
@@ -208,7 +200,6 @@ const MedsByDrone = ({ userRole }: MedsByDroneProps) => {
       setRequestType("");
       setSubOption("");
     } catch (error: any) {
-      console.error('Error creating request:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to send emergency request",
@@ -238,7 +229,6 @@ const MedsByDrone = ({ userRole }: MedsByDroneProps) => {
 
       fetchEmergencyRequests();
     } catch (error) {
-      console.error('Error approving request:', error);
       toast({
         title: "Error",
         description: "Failed to approve request",

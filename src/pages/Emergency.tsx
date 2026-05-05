@@ -10,8 +10,6 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const Emergency = () => {
   const { userRole } = useAuth();
-  
-  console.log('Emergency page userRole:', userRole); // Debug log
 
   return (
     <div className="min-h-screen flex flex-col">

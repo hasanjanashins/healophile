@@ -124,8 +124,8 @@ Be thorough, empathetic, and always prioritize patient safety. Format your respo
       throw new Error('AI gateway error');
     }
 
-    const data = await response.json();
-    const analysis = data.choices[0].message.content;
+    const aiData = await response.json();
+    const analysis = aiData.choices[0].message.content;
 
     console.log(`Symptom analysis completed for user ${userId}`);
 

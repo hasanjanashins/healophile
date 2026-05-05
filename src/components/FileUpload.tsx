@@ -49,17 +49,19 @@ const FILE_TYPE_DESCRIPTIONS: Record<string, string> = {
   'image/tiff': 'TIFF Image'
 };
 
+type StoredMedicalFile = Record<string, unknown>;
+
 // Function to get files from localStorage or initialize with default data
 const getStoredFiles = () => {
   const storedFiles = localStorage.getItem('healophileFiles');
   if (storedFiles) {
-    return JSON.parse(storedFiles);
+    return JSON.parse(storedFiles) as StoredMedicalFile[];
   }
   return [];
 };
 
 // Function to save files to localStorage
-const saveFilesToStorage = (files: any[]) => {
+const saveFilesToStorage = (files: StoredMedicalFile[]) => {
   localStorage.setItem('healophileFiles', JSON.stringify(files));
 };
 
@@ -95,14 +97,17 @@ const MEDICAL_KEYWORDS = [
   'doc', 'pdf', 'img', 'pic', 'photo', 'image', 'document',
 ];
 
-// Validate if file name suggests a medical document
+// Validate if file name or common image/report metadata suggests a medical document
 const validateMedicalFile = (file: File): { isValid: boolean; message: string } => {
-  // Always accept image files (scanned reports, photos of documents, X-rays, etc.)
-  if (file.type.startsWith('image/')) {
+  const extension = file.name.split('.').pop()?.toLowerCase() || '';
+  const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'tiff', 'tif', 'dicom', 'dcm', 'heic', 'heif'];
+
+  // Always accept image-like files because scanned reports/photos often have generic names or missing MIME types.
+  if (file.type.startsWith('image/') || imageExtensions.includes(extension)) {
     return { isValid: true, message: 'Image file accepted as potential medical document.' };
   }
   
-  const nameLower = file.name.toLowerCase().replace(/[_\-\.]/g, ' ');
+  const nameLower = file.name.toLowerCase().replace(/[_.-]/g, ' ');
   const isMedical = MEDICAL_KEYWORDS.some(keyword => nameLower.includes(keyword));
   
   if (isMedical) {
@@ -111,7 +116,7 @@ const validateMedicalFile = (file: File): { isValid: boolean; message: string } 
   
   return {
     isValid: false,
-    message: 'This does not appear to be a medical file. Please rename the file to include relevant medical terms (e.g., "Blood Test Report.pdf").'
+    message: 'Not a medical file. Add a medical term in the filename like report, prescription, blood, scan, xray, lab, or hospital.'
   };
 };
 
@@ -131,9 +136,9 @@ const FileUpload = () => {
   const [selectedDoctors, setSelectedDoctors] = useState<Record<string, boolean>>({});
   const [fileErrors, setFileErrors] = useState<FileError[]>([]);
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files.length > 0) {
-      const newFiles = Array.from(event.target.files);
+  const processSelectedFiles = async (selectedFiles: FileList | File[]) => {
+    const newFiles = Array.from(selectedFiles);
+    if (newFiles.length > 0) {
       setValidating(true);
       
       const validFiles: File[] = [];
@@ -183,6 +188,20 @@ const FileUpload = () => {
           description: `${validFiles.length} medical file(s) successfully added`,
         });
       }
+    }
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      await processSelectedFiles(event.target.files);
+      event.target.value = '';
+    }
+  };
+
+  const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    if (!uploading && !validating && event.dataTransfer.files.length > 0) {
+      await processSelectedFiles(event.dataTransfer.files);
     }
   };
 
@@ -317,6 +336,8 @@ const FileUpload = () => {
         )}
 
         <div 
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={handleDrop}
           className={`border-2 border-dashed rounded-lg p-8 text-center ${
             files.length > 0 ? "border-healophile-blue" : "border-muted"
           }`}
@@ -356,7 +377,7 @@ const FileUpload = () => {
                 multiple
                 className="hidden"
                 onChange={handleFileChange}
-                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.dicom,.tiff,.txt,.xls,.xlsx"
+                accept="*/*"
               />
               <p className="mt-2 text-sm text-muted-foreground">
                 Supported formats: PDF, DOC, DOCX, JPG, PNG, DICOM, TIFF, and other medical formats

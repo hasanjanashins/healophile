@@ -1,10 +1,10 @@
 project_id = "tkprdyrftlyirwrecavh"
 
 [functions.validate-medical-file]
-verify_jwt = true
+verify_jwt = false
 
 [functions.symptom-analysis]
-verify_jwt = true
+verify_jwt = false
 
 [functions.summarize-medical-file]
-verify_jwt = true
+verify_jwt = false

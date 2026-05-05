@@ -234,7 +234,7 @@ const AuthForm = ({ type }: AuthFormProps) => {
                 <Input
                   id="name"
                   name="name"
-                  placeholder="Amit Kumar"
+                  placeholder="Antra Ranjan"
                   className="pl-10"
                   value={formData.name}
                   onChange={handleChange}
@@ -253,7 +253,7 @@ const AuthForm = ({ type }: AuthFormProps) => {
                 id="email"
                 name="email"
                 type="email"
-                placeholder="amit.kumar@gmail.com"
+                  placeholder="antra.ranjan@gmail.com"
                 className={`pl-10 ${errors.email ? 'border-red-500' : ''}`}
                 value={formData.email}
                 onChange={handleChange}
@@ -271,7 +271,7 @@ const AuthForm = ({ type }: AuthFormProps) => {
               <Label htmlFor="password">Password</Label>
               {type === "login" && (
                 <a
-                  href="#"
+                  href="/forgot-password"
                   className="text-sm font-medium text-healophile-blue hover:underline"
                 >
                   Forgot password?

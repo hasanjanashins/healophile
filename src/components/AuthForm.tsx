@@ -271,7 +271,7 @@ const AuthForm = ({ type }: AuthFormProps) => {
               <Label htmlFor="password">Password</Label>
               {type === "login" && (
                 <a
-                  href="#"
+                  href="/forgot-password"
                   className="text-sm font-medium text-healophile-blue hover:underline"
                 >
                   Forgot password?

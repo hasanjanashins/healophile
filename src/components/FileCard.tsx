@@ -9,6 +9,7 @@ import { FileItem } from "@/types/file";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useState } from "react";
+import FileViewerDialog from "@/components/FileViewerDialog";
 
 interface FileCardProps {
   file: FileItem;
@@ -21,12 +22,27 @@ const FileCard = ({ file, isDoctor, onShare, onVerify }: FileCardProps) => {
   const { toast } = useToast();
   const [summary, setSummary] = useState<string>('');
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
   
   const handleDownload = () => {
-    toast({
-      title: "File download started",
-      description: `${file.name} is being downloaded to your device.`
-    });
+    if (file.dataUrl) {
+      const link = document.createElement('a');
+      link.href = file.dataUrl;
+      link.download = file.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast({
+        title: "File download started",
+        description: `${file.name} is being downloaded to your device.`
+      });
+    } else {
+      toast({
+        title: "Download unavailable",
+        description: "File data is not available for download.",
+        variant: "destructive"
+      });
+    }
   };
 
   const generateSummary = async () => {
@@ -167,8 +183,10 @@ const FileCard = ({ file, isDoctor, onShare, onVerify }: FileCardProps) => {
           </Alert>
         )}
         
+        <FileViewerDialog file={file} open={viewerOpen} onOpenChange={setViewerOpen} />
+
         <div className="grid grid-cols-2 gap-2 mt-3">
-          <Button size="sm" variant="outline" className="w-full" onClick={handleDownload}>
+          <Button size="sm" variant="outline" className="w-full" onClick={() => setViewerOpen(true)}>
             <Eye className="h-4 w-4 mr-1" />
             View
           </Button>

@@ -9,9 +9,10 @@ interface FileCardGridProps {
   isDoctor: boolean;
   onShare: (fileId: string) => void;
   onVerify: (fileId: string) => void;
+  onRemove: (fileId: string) => void;
 }
 
-export const FileCardGrid = ({ files, isDoctor, onShare, onVerify }: FileCardGridProps) => {
+export const FileCardGrid = ({ files, isDoctor, onShare, onVerify, onRemove }: FileCardGridProps) => {
   if (files.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-8">
@@ -35,6 +36,7 @@ export const FileCardGrid = ({ files, isDoctor, onShare, onVerify }: FileCardGri
           isDoctor={isDoctor}
           onShare={() => onShare(file.id)}
           onVerify={() => onVerify(file.id)}
+          onRemove={() => onRemove(file.id)}
         />
       ))}
     </div>

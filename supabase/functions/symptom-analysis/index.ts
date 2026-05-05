@@ -3,7 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 serve(async (req) => {
@@ -54,7 +54,14 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    const systemPrompt = `You are a medical triage AI assistant. Analyze patient symptoms and recommend the appropriate emergency service.
+    const systemPrompt = `You are an experienced medical triage AI assistant. Your job is to analyze patient symptoms comprehensively and provide a detailed assessment.
+
+When analyzing symptoms:
+1. Consider ALL symptoms together as a cluster, not individually
+2. Identify the most likely condition(s) based on the symptom combination
+3. Consider common conditions first (cold, flu, allergies, sinusitis, etc.)
+4. Mention if symptoms could indicate something more serious
+5. Provide practical self-care advice
 
 Available emergency services:
 - **Ambulance**: For life-threatening emergencies, severe injuries, chest pain, difficulty breathing, loss of consciousness
@@ -63,12 +70,17 @@ Available emergency services:
 - **Telemedicine**: For minor concerns, follow-ups, medical advice
 
 Provide:
-1. Urgency level (Critical/High/Medium/Low)
-2. Recommended service
-3. Brief reasoning
-4. Warning signs to watch for
+1. **Most Likely Condition**: Name the condition(s) that best match all symptoms together
+2. **Explanation**: Why these symptoms point to this condition
+3. **Urgency Level**: Critical/High/Medium/Low
+4. **Recommended Service**: Which emergency service to use
+5. **Self-Care Tips**: Practical advice the patient can follow right now
+6. **Warning Signs**: Symptoms that would require immediate emergency care
+7. **When to See a Doctor**: Clear guidance on when professional help is needed
 
-Be clear, concise, and prioritize patient safety. Always err on the side of caution.`;
+For example, if someone reports "severe headache, runny nose, continuous sneezing" — recognize this as likely a common cold or possible sinusitis, not three separate issues.
+
+Be thorough, empathetic, and always prioritize patient safety. Format your response clearly with the sections above.`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -80,9 +92,10 @@ Be clear, concise, and prioritize patient safety. Always err on the side of caut
         model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Patient symptoms: ${symptoms}` }
+          { role: 'user', content: `Patient is reporting the following symptoms: ${symptoms}\n\nPlease analyze all these symptoms together as a cluster and identify the most likely condition(s). Provide a comprehensive assessment.` }
         ],
         temperature: 0.3,
+        max_tokens: 1024,
       }),
     });
 

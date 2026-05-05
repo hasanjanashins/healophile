@@ -137,16 +137,7 @@ const FileUpload = () => {
       // Validate each file with AI
       for (const file of newFiles) {
         try {
-          // First check if the file type is in our allowed list
-          if (!ALLOWED_FILE_TYPES.includes(file.type)) {
-            errors.push({
-              name: file.name,
-              error: `Not a supported medical document format. Please upload a PDF, DOC, DOCX, or medical image.`
-            });
-            continue;
-          }
-          
-          // Then check if filename suggests medical content
+          // Check if filename suggests medical content
           const { isValid, message } = validateMedicalFile(file);
           
           if (isValid) {

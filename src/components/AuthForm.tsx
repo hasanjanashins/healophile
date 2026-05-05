@@ -248,6 +248,7 @@ const AuthForm = ({ type }: AuthFormProps) => {
                   value={formData.name}
                   onChange={handleChange}
                   required={type === "signup"}
+                  maxLength={100}
                 />
               </div>
             </div>
@@ -266,6 +267,7 @@ const AuthForm = ({ type }: AuthFormProps) => {
                 value={formData.email}
                 onChange={handleChange}
                 required
+                  maxLength={255}
               />
             </div>
             {errors.email && (

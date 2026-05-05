@@ -75,36 +75,39 @@ const generateBlockchainHash = (file: File, userId: string): string => {
   ).map(b => b.toString(16).padStart(2, '0')).join('');
 };
 
-// Function to validate if a file is a medical document using AI
-const validateMedicalFile = async (file: File): Promise<{ isValid: boolean; message: string }> => {
-  try {
-    // Direct call to Supabase Edge Function
-    const response = await fetch('https://qeqffkhudpfnrjoyirlx.supabase.co/functions/v1/validate-medical-file', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        fileName: file.name,
-        fileType: file.type,
-        fileSize: file.size,
-      }),
-    });
+// Medical keywords to check in file names
+const MEDICAL_KEYWORDS = [
+  'blood', 'test', 'report', 'xray', 'x-ray', 'mri', 'ct', 'scan', 'prescription',
+  'lab', 'diagnosis', 'medical', 'health', 'hospital', 'clinic', 'doctor', 'patient',
+  'ecg', 'ekg', 'ultrasound', 'sonography', 'biopsy', 'pathology', 'radiology',
+  'hemoglobin', 'cholesterol', 'sugar', 'thyroid', 'urine', 'cbc', 'lipid',
+  'vaccine', 'vaccination', 'immunization', 'discharge', 'summary', 'operative',
+  'surgical', 'dental', 'eye', 'vision', 'hearing', 'audiometry', 'pulmonary',
+  'cardiac', 'renal', 'liver', 'kidney', 'bone', 'fracture', 'allergy',
+  'history', 'record', 'chart', 'result', 'findings', 'impression', 'certificate',
+  'fitness', 'insurance', 'claim', 'receipt', 'bill', 'invoice', 'pharmacy',
+  'medicine', 'drug', 'dosage', 'treatment', 'therapy', 'rehab', 'physiotherapy',
+  'diet', 'nutrition', 'bmi', 'weight', 'height', 'vitals', 'pulse', 'bp',
+  'oxygen', 'spo2', 'temperature', 'fever', 'covid', 'pcr', 'antigen',
+  'mammogram', 'pap', 'smear', 'endoscopy', 'colonoscopy', 'angiography',
+  'dexa', 'hba1c', 'creatinine', 'electrolyte', 'serum', 'plasma', 'swab',
+  'culture', 'sensitivity', 'imaging', 'radiograph', 'fluoroscopy',
+  'doc', 'pdf', 'img', 'pic', 'photo', 'image', 'document',
+];
 
-    if (!response.ok) {
-      throw new Error('Failed to validate file');
-    }
-
-    const result = await response.json();
-    console.log('Validation result:', result);
-    return result;
-  } catch (error) {
-    console.error('Error validating file:', error);
-    return { 
-      isValid: false, 
-      message: 'Error validating file. Falling back to basic validation.' 
-    };
+// Validate if file name suggests a medical document
+const validateMedicalFile = (file: File): { isValid: boolean; message: string } => {
+  const nameLower = file.name.toLowerCase().replace(/[_\-\.]/g, ' ');
+  const isMedical = MEDICAL_KEYWORDS.some(keyword => nameLower.includes(keyword));
+  
+  if (isMedical) {
+    return { isValid: true, message: 'File recognized as a medical document.' };
   }
+  
+  return {
+    isValid: false,
+    message: 'This does not appear to be a medical file. Please rename the file to include relevant medical terms (e.g., "Blood Test Report.pdf").'
+  };
 };
 
 interface FileError {
@@ -143,8 +146,8 @@ const FileUpload = () => {
             continue;
           }
           
-          // Then perform AI validation
-          const { isValid, message } = await validateMedicalFile(file);
+          // Then check if filename suggests medical content
+          const { isValid, message } = validateMedicalFile(file);
           
           if (isValid) {
             validFiles.push(file);

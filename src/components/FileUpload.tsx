@@ -334,6 +334,8 @@ const FileUpload = () => {
         )}
 
         <div 
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={handleDrop}
           className={`border-2 border-dashed rounded-lg p-8 text-center ${
             files.length > 0 ? "border-healophile-blue" : "border-muted"
           }`}
@@ -373,7 +375,7 @@ const FileUpload = () => {
                 multiple
                 className="hidden"
                 onChange={handleFileChange}
-                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.dicom,.tiff,.txt,.xls,.xlsx"
+                accept="*/*"
               />
               <p className="mt-2 text-sm text-muted-foreground">
                 Supported formats: PDF, DOC, DOCX, JPG, PNG, DICOM, TIFF, and other medical formats

@@ -92,6 +92,16 @@ const MedicalFileGallery = () => {
   };
 
   const handleVerifyBlockchain = async (fileId: string) => {
+  const handleRemoveFile = (fileId: string) => {
+    const updatedFiles = files.filter(f => f.id !== fileId);
+    setFiles(updatedFiles);
+    saveFilesToStorage(updatedFiles);
+    toast({
+      title: "File removed",
+      description: "The file has been removed from your records.",
+    });
+  };
+
     // Find the file
     const fileToVerify = files.find(f => f.id === fileId);
     if (!fileToVerify) return;
@@ -149,6 +159,7 @@ const MedicalFileGallery = () => {
           isDoctor={isDoctor}
           onShare={setSelectedFile}
           onVerify={handleVerifyBlockchain}
+          onRemove={handleRemoveFile}
         />
         
         <ShareFileDialog

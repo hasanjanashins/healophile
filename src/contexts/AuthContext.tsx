@@ -109,6 +109,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    // Clear sensitive medical data from localStorage
+    localStorage.removeItem('healophileFiles');
     setUserRole(null);
     toast.success('Signed out successfully!');
   };

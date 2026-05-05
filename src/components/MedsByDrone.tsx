@@ -189,8 +189,7 @@ const MedsByDrone = ({ userRole }: MedsByDroneProps) => {
           details: requestDetails,
           latitude: latitude,
           longitude: longitude,
-          status: 'approved', // Doctor requests are auto-approved
-          assigned_doctor_id: user?.id
+          status: 'pending',
         });
 
       if (error) throw error;

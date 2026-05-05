@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.enforce_doctor_update_fields() FROM anon;

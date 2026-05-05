@@ -31,14 +31,17 @@ serve(async (req) => {
       }
     );
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
+    const token = authHeader.replace('Bearer ', '');
+    const { data, error: authError } = await supabase.auth.getClaims(token);
+
+    if (authError || !data?.claims) {
       return new Response(JSON.stringify({ error: "Invalid authentication" }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    const userId = data.claims.sub;
 
     const { symptoms } = await req.json();
 
@@ -124,7 +127,7 @@ Be thorough, empathetic, and always prioritize patient safety. Format your respo
     const data = await response.json();
     const analysis = data.choices[0].message.content;
 
-    console.log(`Symptom analysis completed for user ${user.id}`);
+    console.log(`Symptom analysis completed for user ${userId}`);
 
     return new Response(JSON.stringify({ analysis }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

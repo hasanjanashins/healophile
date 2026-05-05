@@ -64,7 +64,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       const role = data?.role || 'patient';
-      console.log('Fetched user role:', role); // Debug log
       setUserRole(role);
     } catch (error) {
       console.error('Error fetching user role:', error);

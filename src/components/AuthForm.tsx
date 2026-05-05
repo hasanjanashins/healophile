@@ -133,9 +133,6 @@ const AuthForm = ({ type }: AuthFormProps) => {
         }
       } else {
         // Generate blockchain hash for user security
-        const userHash = generateBlockchainHash(formData.email, formData.role);
-        console.log("User registered with blockchain hash:", userHash);
-        
         const { error } = await signUp(formData.email, formData.password, formData.name, formData.role);
         
         if (error) {
@@ -162,7 +159,6 @@ const AuthForm = ({ type }: AuthFormProps) => {
         navigate("/login");
       }
     } catch (error: any) {
-      console.error("Auth error:", error);
       toast({
         title: "Authentication error",
         description: error.message || "There was a problem authenticating you.",

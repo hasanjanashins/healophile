@@ -49,17 +49,19 @@ const FILE_TYPE_DESCRIPTIONS: Record<string, string> = {
   'image/tiff': 'TIFF Image'
 };
 
+type StoredMedicalFile = Record<string, unknown>;
+
 // Function to get files from localStorage or initialize with default data
 const getStoredFiles = () => {
   const storedFiles = localStorage.getItem('healophileFiles');
   if (storedFiles) {
-    return JSON.parse(storedFiles);
+    return JSON.parse(storedFiles) as StoredMedicalFile[];
   }
   return [];
 };
 
 // Function to save files to localStorage
-const saveFilesToStorage = (files: any[]) => {
+const saveFilesToStorage = (files: StoredMedicalFile[]) => {
   localStorage.setItem('healophileFiles', JSON.stringify(files));
 };
 
@@ -105,7 +107,7 @@ const validateMedicalFile = (file: File): { isValid: boolean; message: string } 
     return { isValid: true, message: 'Image file accepted as potential medical document.' };
   }
   
-  const nameLower = file.name.toLowerCase().replace(/[_\-\.]/g, ' ');
+  const nameLower = file.name.toLowerCase().replace(/[_.-]/g, ' ');
   const isMedical = MEDICAL_KEYWORDS.some(keyword => nameLower.includes(keyword));
   
   if (isMedical) {

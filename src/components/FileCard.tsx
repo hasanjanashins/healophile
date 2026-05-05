@@ -1,6 +1,7 @@
 
 import React from "react";
 import { Share, Lock, FileText, Image, Calendar, Shield, Eye, Download, ShieldCheck, AlertTriangle, Sparkles, Loader2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -16,9 +17,10 @@ interface FileCardProps {
   isDoctor: boolean;
   onShare: () => void;
   onVerify: () => void;
+  onRemove: () => void;
 }
 
-const FileCard = ({ file, isDoctor, onShare, onVerify }: FileCardProps) => {
+const FileCard = ({ file, isDoctor, onShare, onVerify, onRemove }: FileCardProps) => {
   const { toast } = useToast();
   const [summary, setSummary] = useState<string>('');
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
@@ -217,6 +219,12 @@ const FileCard = ({ file, isDoctor, onShare, onVerify }: FileCardProps) => {
             <ShieldCheck className="h-4 w-4 mr-1" />
             Verify
           </Button>
+          {!isDoctor && (
+            <Button size="sm" variant="outline" className="w-full text-destructive hover:text-destructive" onClick={onRemove}>
+              <Trash2 className="h-4 w-4 mr-1" />
+              Remove
+            </Button>
+          )}
           {!isDoctor && !file.isShared && (
             <Button size="sm" className="w-full bg-healophile-purple col-span-2" onClick={onShare}>
               <Share className="h-4 w-4 mr-1" />

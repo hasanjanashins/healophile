@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, EyeOff, Lock, Mail, User, AlertCircle } from "lucide-react";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -27,7 +26,6 @@ const AuthForm = ({ type }: AuthFormProps) => {
     name: "",
     email: "",
     password: "",
-    role: "patient" as "patient" | "doctor"
   });
   const [errors, setErrors] = useState<{
     email?: string;
@@ -48,13 +46,6 @@ const AuthForm = ({ type }: AuthFormProps) => {
         [e.target.name]: undefined
       });
     }
-  };
-
-  const handleRoleChange = (value: string) => {
-    setFormData({
-      ...formData,
-      role: value as "patient" | "doctor"
-    });
   };
 
   const validateEmail = (email: string): boolean => {
@@ -160,7 +151,7 @@ const AuthForm = ({ type }: AuthFormProps) => {
         }
       } else {
         // Generate blockchain hash for user security
-        const { error } = await signUp(formData.email, formData.password, formData.name, formData.role);
+        const { error } = await signUp(formData.email, formData.password, formData.name, 'patient');
         
         if (error) {
           if (error.message.includes("User already registered")) {
@@ -316,24 +307,6 @@ const AuthForm = ({ type }: AuthFormProps) => {
             {errors.password && (
               <p className="text-sm text-red-500">{errors.password}</p>
             )}
-          </div>
-          
-          <div className="space-y-2">
-            <Label>I am a</Label>
-            <RadioGroup 
-              value={formData.role} 
-              onValueChange={handleRoleChange}
-              className="flex space-x-4"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="patient" id="patient" />
-                <Label htmlFor="patient" className="cursor-pointer">Patient</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="doctor" id="doctor" />
-                <Label htmlFor="doctor" className="cursor-pointer">Doctor</Label>
-              </div>
-            </RadioGroup>
           </div>
           
           <Button
